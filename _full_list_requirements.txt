@@ -1,0 +1,43 @@
+DvG_RingBuffer_v1.0
+                                numpy
+
+DvG_pyqt_ChartHistory_v2.0
+                                PyQt5
+                                pyqtgraph
+                                numpy
+                                            dvg_ringbuffer
+
+DvG_Buffered_FIR_Filter
+                                numpy
+                                scipy
+                                            dvg_fftw_convolvevalid1d
+                                            dvg_ringbuffer
+DvG_Buffered_FIR_Filter_GUI
+                                PyQt5
+                                numpy
+                                            dvg_buffered_fir_filter
+
+DvG_FFTW_ConvolveValid1D
+                                numpy
+                                pyfftw
+
+DvG_FFTW_WelchPowerSpectrum
+                                numpy
+                                scipy
+                                numba
+                                pyfftw
+
+
+
+
+DvG_pyqt_BufferedPlot_1.0
+                                PyQt5
+                                pyqtgraph
+                                numpy
+
+DvG_pyqt_controls_v1.0.3
+                                PyQt5
+
+DvG_pyqt_FileLogger_v1.0.2
+                                PyQt5
+                                            dvg_debug_functions
