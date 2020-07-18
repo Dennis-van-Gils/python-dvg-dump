@@ -6,7 +6,7 @@ dvg_fftw_firfilter
                                 numpy
                                 scipy
                                             dvg_fftw_convolvevalid1d
-                                            dvg_ringbuffer
+                                            dvg_ringbuffer_cont_c_numpy
 dvg_fftw_firfilter_gui
                                 PyQt5
                                 numpy
@@ -27,7 +27,7 @@ dvg_pyqt_charthistory
                                 PyQt5
                                 pyqtgraph
                                 numpy
-                                            dvg_ringbuffer
+                                            dvg_ringbuffer_cont_c_numpy
 
 dvg_pyqt_controls
                                 PyQt5
@@ -36,5 +36,5 @@ dvg_pyqt_filelogger
                                 PyQt5
                                             dvg_debug_functions
 
-dvg_ringbuffer
+dvg_ringbuffer_cont_c_numpy
                                 numpy
