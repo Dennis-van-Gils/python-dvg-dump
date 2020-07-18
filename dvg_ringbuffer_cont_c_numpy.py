@@ -35,8 +35,8 @@ __url__         = "https://github.com/Dennis-van-Gils/DvG_Arduino_lock-in_amp"
 __date__        = "12-08-2019"
 __version__     = "1.0.0"
 
+from collections.abc import Sequence
 import numpy as np
-from collections import Sequence
 
 class RingBuffer(Sequence):
     def __init__(self, capacity, dtype=np.float64, allow_overwrite=True):
