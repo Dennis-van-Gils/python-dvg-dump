@@ -1,16 +1,16 @@
 """
 Class DvG_RingBuffer provides a ring buffer. If, and only if the ring buffer is
 completely full, will it return its array data as a contiguous C-style numpy
-array at a single fixed memory location per ring buffer instance. It does so
+array at a single fixed memory address per ring buffer instance. It does so
 by unwrapping the discontiguous ring buffer array into a second extra 'unwrap'
 buffer that is a private member of the ring buffer class. This is advantegeous
 for other accelerated computations by, e.g. numpy / sigpy / numba / pyFFTW,
-that benefit from being fed with contiguous arrays at the same memory locations
+that benefit from being fed with contiguous arrays at the same memory address
 each time again, such that compiler optimizations and data planning are made
 possible.
 
 When the ring buffer is not completely full, it will return its data as a
-contiguous C-style numpy array, but at different memory locations.
+contiguous C-style numpy array, but at different memory adresses.
 
 Commonly, 'collections.deque' is used to act as a ring buffer. The benefits of
 a deque is that it is thread safe and fast (enough) for most situations.
