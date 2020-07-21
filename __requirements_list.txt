@@ -1,40 +1,43 @@
-dvg_fftw_convolvevalid1d
-                                numpy
-                                pyfftw
+┌────
+│
+    dvg_fftw_convolvevalid1d
+                                    numpy
+                                    pyfftw
 
-dvg_fftw_firfilter
-                                numpy
-                                scipy
-                                            dvg_fftw_convolvevalid1d
-                                            dvg_ringbuffer_cont_c_numpy
-dvg_fftw_firfilter_gui
-                                PyQt5
-                                numpy
-                                            dvg_fftw_firfilter
+    dvg_fftw_firfilter
+                                    numpy
+                                    scipy
+                                                dvg_fftw_convolvevalid1d
+                                                dvg_ringbuffer
+    dvg_fftw_firfilter_gui
+                                    PyQt5
+                                    numpy
+                                                dvg_fftw_firfilter
 
-dvg_fftw_welchpowerspectrum
-                                numpy
-                                scipy
-                                numba
-                                pyfftw
+    dvg_fftw_welchpowerspectrum
+                                    numpy
+                                    scipy
+                                    numba
+                                    pyfftw
+│
+├────
+│
+    dvg_pyqt_bufferedplot
+                                    PyQt5
+                                    pyqtgraph
+                                    numpy
 
-dvg_pyqt_bufferedplot
-                                PyQt5
-                                pyqtgraph
-                                numpy
+    dvg_pyqt_charthistory
+                                    PyQt5
+                                    pyqtgraph
+                                    numpy
+                                                dvg_ringbuffer
 
-dvg_pyqt_charthistory
-                                PyQt5
-                                pyqtgraph
-                                numpy
-                                            dvg_ringbuffer_cont_c_numpy
+    dvg_pyqt_controls
+                                    PyQt5
 
-dvg_pyqt_controls
-                                PyQt5
-
-dvg_pyqt_filelogger
-                                PyQt5
-                                            dvg_debug_functions
-
-dvg_ringbuffer_cont_c_numpy
-                                numpy
+    dvg_pyqt_filelogger
+                                    PyQt5
+                                                dvg_debug_functions
+│
+└────
