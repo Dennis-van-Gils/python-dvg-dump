@@ -130,9 +130,11 @@ class ChartHistory(object):
                 )
 
     def clear(self):
-        """Clear the contents of the history buffer.
+        """Clear the contents of the history buffer and clear the curve.
         """
         locker = QtCore.QMutexLocker(self.mutex)
         self._RB_x.clear()
         self._RB_y.clear()
         locker.unlock()
+
+        self.update_curve()
