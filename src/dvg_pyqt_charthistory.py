@@ -10,8 +10,6 @@ __url__ = "https://github.com/Dennis-van-Gils/..."
 __date__ = "22-07-2020"
 __version__ = "1.0.0"
 
-import time
-
 import numpy as np
 from PyQt5 import QtCore
 import pyqtgraph as pg
@@ -106,8 +104,6 @@ class ChartHistory(object):
         the history buffer, and redraw the curve on screen.
         """
 
-        tick = time.perf_counter()
-
         # Create a snapshot of the buffered data. Fast operation.
         locker = QtCore.QMutexLocker(self.mutex)
         self._snapshot_x = np.copy(self._RB_x)
@@ -115,9 +111,6 @@ class ChartHistory(object):
         # print("numel x: %d, numel y: %d" %
         #      (self._snapshot_x.size, self._snapshot_y.size))
         locker.unlock()
-
-        tock = time.perf_counter()
-        print("%.4f" % (tock - tick))
 
         # Now update the data behind the curve and redraw it on screen.
         # Note: .setData() is a super fast operation and will internally emit
@@ -135,9 +128,6 @@ class ChartHistory(object):
                     / float(self.x_axis_divisor),
                     self._snapshot_y / float(self.y_axis_divisor),
                 )
-
-        tack = time.perf_counter()
-        print("        %.4f" % (tack - tock))
 
     def clear(self):
         """Clear the contents of the history buffer.
