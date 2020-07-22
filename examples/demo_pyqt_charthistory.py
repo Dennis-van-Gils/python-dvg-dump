@@ -9,11 +9,12 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets as QtWid
 import pyqtgraph as pg
 
+from dvg_debug_functions import dprint
 from dvg_pyqt_charthistory import ChartHistory
 from dvg_pyqt_controls import SS_GROUP
 from dvg_qdeviceio import QDeviceIO
 
-if 0:
+if 1:
     pg.setConfigOptions(useOpenGL=True)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOptions(enableExperimental=True)
@@ -22,9 +23,11 @@ pg.setConfigOption("leftButtonPan", False)
 
 # Constants
 Fs = 10000  # Sampling rate of the simulated data [Hz]
-WORKER_DAQ_INTERVAL_MS = 1000 / 50  # [ms]
-CHART_DRAW_INTERVAL_MS = 1000 / 25  # [ms]
+WORKER_DAQ_INTERVAL_MS = round(1000 / 50)  # [ms]
+CHART_DRAW_INTERVAL_MS = round(1000 / 25)  # [ms]
 CHART_HISTORY_TIME = 10  # 10 [s]
+
+prev_tick = time.perf_counter()
 
 # ------------------------------------------------------------------------------
 #   MainWindow
@@ -35,7 +38,7 @@ class MainWindow(QtWid.QWidget):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.setGeometry(50, 50, 800, 660)
+        self.setGeometry(350, 50, 800, 660)
         self.setWindowTitle("ChartHistory demo")
 
         # Create PlotItem
@@ -151,9 +154,24 @@ def about_to_quit():
 
 
 def DAQ_function():
-    x = np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3) / Fs + time.perf_counter()
-    y = np.sin(2 * np.pi * 100 * x)
+    global prev_tick
+    tick = time.perf_counter()
+
+    if len(window.CH_1._RB_x) == 0:
+        x_0 = 0
+    else:
+        x_0 = window.CH_1._RB_x[-1]
+
+    # x = np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3) / Fs + time.perf_counter()
+    x = (1 + np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3)) / Fs + x_0
+    y = np.sin(2 * np.pi * 100.1 * x)
     window.CH_1.add_new_readings(x, y)
+
+    tock = time.perf_counter()
+    dprint("%.3f DAQ function %.3f" % (tick - prev_tick, tock - tick))
+    prev_tick = tick
+
+    # QtWid.QApplication.processEvents()
 
     return True
 
