@@ -167,8 +167,7 @@ def DAQ_function():
     y = np.sin(2 * np.pi * 100.1 * x)
     window.CH_1.add_new_readings(x, y)
 
-    tock = time.perf_counter()
-    dprint("%.3f DAQ function %.3f" % (tick - prev_tick, tock - tick))
+    dprint("%.3f DAQ function" % (tick - prev_tick))
     prev_tick = tick
 
     # QtWid.QApplication.processEvents()
