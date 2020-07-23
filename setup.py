@@ -23,8 +23,8 @@ def read(*names, **kwargs):
 
 
 setup(
-    name="dvg-debug-dump",
-    version="0.0.0",
+    name="dvg-dump",
+    version="0.0.1",
     license="MIT",
     description="Temporary dump. To be split into separate packages. ",
     long_description="%s\n%s"
@@ -57,7 +57,7 @@ setup(
         # "Topic :: Utilities",
     ],
     project_urls={
-        "Issue Tracker": "https://github.com/Dennis-van-Gils/python-dvg-debug-functions/issues",
+        "Issue Tracker": "https://github.com/Dennis-van-Gils/python-dvg-dump/issues",
     },
     keywords=[],
     python_requires=">=3.6",
