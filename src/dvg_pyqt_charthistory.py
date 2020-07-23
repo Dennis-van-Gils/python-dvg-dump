@@ -2,7 +2,12 @@
 # -*- coding: utf-8 -*-
 """Class ChartHistory provides a thread-safe history buffer for (x, y)-data
 points behind a PyQtGraph plot curve. Hence, the plot curve can now act as a
-time-moving strip chart or Lissajous chart.
+history strip chart or Lissajous chart, whilst being fed with new data.
+
+TODO: Only strip charts -- with the x-array always being shifted such that
+the right side is 0 -- are supported at the moment. I should implement
+a toggle for enabling/disabling this shift, such that Lissajous curves
+are also possible.
 """
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
