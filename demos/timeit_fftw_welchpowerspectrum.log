@@ -1,0 +1,28 @@
+Timeit: dvg_fftw_welchpowerspectrum
+
+Running on...
+  node   : Onera
+  system : Windows
+  release: 10
+  version: 10.0.18362
+  machine: AMD64
+  proc   : AMD64 Family 23 Model 113 Stepping 0, AuthenticAMD
+  Python : 3.8.3
+
+N = 1000, REPS = 5
+
+scipy.signal.welch:
+               1.042 ms
+               1.040 ms
+               1.040 ms
+               1.040 ms
+               1.039 ms
+
+dvg_fftw_welchpowerspectrum:
+               0.464 ms
+               0.462 ms
+               0.462 ms
+               0.461 ms
+               0.461 ms
+
+Times faster: 2.26
