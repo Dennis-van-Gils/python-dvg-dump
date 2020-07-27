@@ -156,9 +156,7 @@ class ThreadSafeCurve(object):
             if (len(self._snapshot_x) == 0) or (
                 np.alltrue(np.isnan(self._snapshot_y))
             ):
-                self.curve.setData(
-                    [], []
-                )  # TODO: check if [0], [np.nan] or [] should be set
+                self.curve.setData([], [])
             else:
                 x_0 = self._snapshot_x[-1] if self._shift_right_x_to_zero else 0
                 self.curve.setData(
