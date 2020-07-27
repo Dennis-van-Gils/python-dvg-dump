@@ -8,12 +8,16 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets as QtWid
 import pyqtgraph as pg
 
-# from dvg_pyqt_charthistory import ChartHistory
-from dvg_pyqtgraph_threadsafe_plots import HistoryChart, BufferedPlot, Plot
-from dvg_pyqt_controls import SS_GROUP
 from dvg_qdeviceio import QDeviceIO
+from dvg_pyqt_controls import SS_GROUP
+from dvg_pyqtgraph_threadsafe import (
+    HistoryChartCurve,
+    BufferedPlotCurve,
+    PlotCurve,
+)
 
-if 1:
+USE_OPENGL = True
+if USE_OPENGL:
     print("OpenGL acceleration: Enabled")
     pg.setConfigOptions(useOpenGL=True)
     pg.setConfigOptions(antialias=True)
@@ -56,7 +60,7 @@ class MainWindow(QtWid.QWidget):
 
         # Create ChartHistory and PlotDataItem and link them together
         PEN_01 = pg.mkPen(color=[0, 200, 0], width=3)
-        self.qcurve = Plot(
+        self.qcurve = HistoryChartCurve(
             capacity=round(CHART_HISTORY_TIME * Fs),
             linked_curve=self.pi_chart.plot(pen=PEN_01),
         )

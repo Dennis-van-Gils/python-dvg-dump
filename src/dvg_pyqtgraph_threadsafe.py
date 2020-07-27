@@ -192,7 +192,7 @@ class ThreadSafeCurve(object):
         return (len(self._buffer_x), len(self._buffer_y))
 
 
-class HistoryChart(ThreadSafeCurve):
+class HistoryChartCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
         """
         """
@@ -204,7 +204,7 @@ class HistoryChart(ThreadSafeCurve):
         )
 
 
-class BufferedPlot(ThreadSafeCurve):
+class BufferedPlotCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
         """
         """
@@ -216,7 +216,7 @@ class BufferedPlot(ThreadSafeCurve):
         )
 
 
-class Plot(ThreadSafeCurve):
+class PlotCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
         """
         """
