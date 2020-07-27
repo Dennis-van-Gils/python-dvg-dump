@@ -8,7 +8,8 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets as QtWid
 import pyqtgraph as pg
 
-from dvg_pyqt_charthistory import ChartHistory
+# from dvg_pyqt_charthistory import ChartHistory
+from dvg_pyqtgraph_threadsafe_plots import HistoryChart, BufferedPlot, Plot
 from dvg_pyqt_controls import SS_GROUP
 from dvg_qdeviceio import QDeviceIO
 
@@ -55,7 +56,7 @@ class MainWindow(QtWid.QWidget):
 
         # Create ChartHistory and PlotDataItem and link them together
         PEN_01 = pg.mkPen(color=[0, 200, 0], width=3)
-        self.CH_1 = ChartHistory(
+        self.qcurve = Plot(
             capacity=round(CHART_HISTORY_TIME * Fs),
             linked_curve=self.pi_chart.plot(pen=PEN_01),
         )
@@ -145,7 +146,7 @@ class MainWindow(QtWid.QWidget):
         )
 
         if reply == QtWid.QMessageBox.Yes:
-            self.CH_1.clear()
+            self.qcurve.clear()
 
     @QtCore.pyqtSlot()
     def process_qpbt_pause_chart(self):
@@ -194,25 +195,26 @@ def update_chart():
                     window.chart_rate_accumulator / dT * 1e3
                 )
             except ZeroDivisionError:
-                obtained_chart_rate_Hz = np.nan
+                window.obtained_chart_rate_Hz = np.nan
 
             window.chart_rate_accumulator = 0
 
     window.qlbl_chart_rate.setText("%.1f" % window.obtained_chart_rate_Hz)
-    window.pi_chart.setTitle("%s points" % f"{(len(window.CH_1._RB_x)):,}")
+    window.pi_chart.setTitle("%s points" % f"{(window.qcurve.size[0]):,}")
 
-    window.CH_1.update_curve()
+    window.qcurve.update_curve()
 
 
 def DAQ_function():
-    if len(window.CH_1._RB_x) == 0:
+    if window.qcurve.size[0] == 0:
         x_0 = 0
     else:
-        x_0 = window.CH_1._RB_x[-1]
+        x_0 = window.qcurve._buffer_x[-1]
 
     x = (1 + np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3)) / Fs + x_0
     y = np.sin(2 * np.pi * 0.5 * x)
-    window.CH_1.add_new_readings(x, y)
+    window.qcurve.add_new_readings(x, y)
+    window.qcurve.set_data(x, y)
 
     return True
 

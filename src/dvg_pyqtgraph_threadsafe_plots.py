@@ -27,9 +27,15 @@ import pyqtgraph as pg
 from dvg_ringbuffer import RingBuffer
 
 
-class ChartHistory(object):
-    def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
-        """Provides a thread-safe history buffer for (x, y)-data points behind a
+class ThreadSafeCurve(object):
+    def __init__(
+        self,
+        capacity: int,
+        linked_curve: pg.PlotDataItem,
+        shift_right_x_to_zero: bool = True,
+        use_ringbuffer: bool = True,
+    ):
+        """Provides a thread-safe buffer for (x, y)-data points behind a
         PyQtGraph plot curve. Hence, the plot curve can now act as a time-moving
         strip chart or Lissajous chart.
 
@@ -66,13 +72,20 @@ class ChartHistory(object):
         """
         self.capacity = capacity
         self.curve = linked_curve
-        self.mutex = QtCore.QMutex()  # To allow proper multithreading
+        self._shift_right_x_to_zero = shift_right_x_to_zero
+        self._use_ringbuffer = use_ringbuffer
+        self._mutex = QtCore.QMutex()  # To allow proper multithreading
 
         self.x_axis_divisor = 1
         self.y_axis_divisor = 1
 
-        self._RB_x = RingBuffer(capacity=capacity)
-        self._RB_y = RingBuffer(capacity=capacity)
+        if self._use_ringbuffer:
+            self._buffer_x = RingBuffer(capacity=capacity)
+            self._buffer_y = RingBuffer(capacity=capacity)
+        else:
+            self._buffer_x = np.array([])
+            self._buffer_y = np.array([])
+
         self._snapshot_x = [0]
         self._snapshot_y = [0]
 
@@ -86,28 +99,40 @@ class ChartHistory(object):
     def apply_downsampling(self, do_apply: bool = True, ds=4):
         """Downsample the curve by using PyQtGraph's build-in method.
         """
-        if do_apply:
-            # Speed up plotting, needed for keeping the GUI responsive when
-            # using large datasets
-            self.curve.setDownsampling(ds=ds, auto=False, method="mean")
-        else:
-            self.curve.setDownsampling(ds=1, auto=False, method="mean")
+        if self.curve is not None:
+            if do_apply:
+                # Speed up plotting, needed for keeping the GUI responsive when
+                # using large datasets
+                self.curve.setDownsampling(ds=ds, auto=False, method="mean")
+            else:
+                self.curve.setDownsampling(ds=1, auto=False, method="mean")
 
     def add_new_reading(self, x, y):
-        """Add a single (x, y)-data point to the history buffer.
+        """Add a single (x, y)-data point to the ring buffer.
         """
-        locker = QtCore.QMutexLocker(self.mutex)
-        self._RB_x.append(x)
-        self._RB_y.append(y)
-        locker.unlock()
+        if self._use_ringbuffer:
+            locker = QtCore.QMutexLocker(self._mutex)
+            self._buffer_x.append(x)
+            self._buffer_y.append(y)
+            locker.unlock()
 
     def add_new_readings(self, x_list, y_list):
-        """Add a list of (x, y)-data points to the history buffer.
+        """Add a list of (x, y)-data points to the ring buffer.
         """
-        locker = QtCore.QMutexLocker(self.mutex)
-        self._RB_x.extend(x_list)
-        self._RB_y.extend(y_list)
-        locker.unlock()
+        if self._use_ringbuffer:
+            locker = QtCore.QMutexLocker(self._mutex)
+            self._buffer_x.extend(x_list)
+            self._buffer_y.extend(y_list)
+            locker.unlock()
+
+    def set_data(self, x_list, y_list):
+        """Set the (x, y)-data underlying the curve.
+        """
+        if not self._use_ringbuffer:
+            locker = QtCore.QMutexLocker(self._mutex)
+            self._buffer_x = x_list
+            self._buffer_y = y_list
+            locker.unlock()
 
     def update_curve(self):
         """Update the data behind the curve, based on the current contents of
@@ -115,9 +140,9 @@ class ChartHistory(object):
         """
 
         # Create a snapshot of the buffered data. Fast operation.
-        locker = QtCore.QMutexLocker(self.mutex)
-        self._snapshot_x = np.copy(self._RB_x)
-        self._snapshot_y = np.copy(self._RB_y)
+        locker = QtCore.QMutexLocker(self._mutex)
+        self._snapshot_x = np.copy(self._buffer_x)
+        self._snapshot_y = np.copy(self._buffer_y)
         # print("numel x: %d, numel y: %d" %
         #      (self._snapshot_x.size, self._snapshot_y.size))
         locker.unlock()
@@ -131,20 +156,75 @@ class ChartHistory(object):
             if (len(self._snapshot_x) == 0) or (
                 np.alltrue(np.isnan(self._snapshot_y))
             ):
-                self.curve.setData([0], [0])
-            else:
                 self.curve.setData(
-                    (self._snapshot_x - self._snapshot_x[-1])
-                    / float(self.x_axis_divisor),
+                    [], []
+                )  # TODO: check if [0], [np.nan] or [] should be set
+            else:
+                x_0 = self._snapshot_x[-1] if self._shift_right_x_to_zero else 0
+                self.curve.setData(
+                    (self._snapshot_x - x_0) / float(self.x_axis_divisor),
                     self._snapshot_y / float(self.y_axis_divisor),
                 )
 
     def clear(self):
-        """Clear the contents of the history buffer and clear the curve.
+        """Clear the contents of the curve and redraw.
         """
-        locker = QtCore.QMutexLocker(self.mutex)
-        self._RB_x.clear()
-        self._RB_y.clear()
+        locker = QtCore.QMutexLocker(self._mutex)
+        if self._use_ringbuffer:
+            self._buffer_x.clear()
+            self._buffer_y.clear()
+        else:
+            self._buffer_x = np.array([])
+            self._buffer_y = np.array([])
         locker.unlock()
 
         self.update_curve()
+
+    @property
+    def size(self):
+        """Number of elements currently contained in the underlying (x, y)-
+        buffers of the curve. Note that this is not neccesarily the number of
+        elements of the currently drawn curve, but reflects the data buffer
+        behind it that will be drawn onto screen by the next call to
+        `update_curve()`.
+        """
+        # fmt: off
+        locker = QtCore.QMutexLocker(self._mutex) # pylint: disable=unused-variable
+        # fmt: on
+        return (len(self._buffer_x), len(self._buffer_y))
+
+
+class HistoryChart(ThreadSafeCurve):
+    def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
+        """
+        """
+        super().__init__(
+            capacity=capacity,
+            linked_curve=linked_curve,
+            shift_right_x_to_zero=True,
+            use_ringbuffer=True,
+        )
+
+
+class BufferedPlot(ThreadSafeCurve):
+    def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
+        """
+        """
+        super().__init__(
+            capacity=capacity,
+            linked_curve=linked_curve,
+            shift_right_x_to_zero=False,
+            use_ringbuffer=True,
+        )
+
+
+class Plot(ThreadSafeCurve):
+    def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
+        """
+        """
+        super().__init__(
+            capacity=capacity,
+            linked_curve=linked_curve,
+            shift_right_x_to_zero=False,
+            use_ringbuffer=False,
+        )
