@@ -10,11 +10,7 @@ import pyqtgraph as pg
 
 from dvg_qdeviceio import QDeviceIO
 from dvg_pyqt_controls import SS_GROUP
-from dvg_pyqtgraph_threadsafe import (
-    HistoryChartCurve,
-    BufferedPlotCurve,
-    PlotCurve,
-)
+from dvg_pyqtgraph_threadsafe import ThreadSafeGraphicsWindow
 
 USE_OPENGL = True
 if USE_OPENGL:
@@ -43,26 +39,58 @@ class MainWindow(QtWid.QWidget):
         self.setGeometry(350, 50, 800, 660)
         self.setWindowTitle("ChartHistory demo")
 
-        # Create PlotItem
-        self.gw_chart = pg.GraphicsWindow()
-        self.pi_chart = self.gw_chart.addPlot()
+        self.tsgwin = ThreadSafeGraphicsWindow()
 
         p = {"color": "#CCC", "font-size": "10pt"}
-        self.pi_chart.showGrid(x=1, y=1)
-        self.pi_chart.setTitle("title")
-        self.pi_chart.setLabel("bottom", text="history (sec)", **p)
-        self.pi_chart.setLabel("left", text="amplitude", **p)
-        self.pi_chart.setRange(
+        self.tsplot_1 = self.tsgwin.addThreadSafePlot()
+        self.tsplot_1.showGrid(x=1, y=1)
+        self.tsplot_1.setTitle("title")
+        self.tsplot_1.setLabel("bottom", text="history (sec)", **p)
+        self.tsplot_1.setLabel("left", text="amplitude", **p)
+        self.tsplot_1.setRange(
             xRange=[-1.04 * CHART_HISTORY_TIME, CHART_HISTORY_TIME * 0.04],
             yRange=[-1.1, 1.1],
             disableAutoRange=True,
         )
 
-        # Create ChartHistory and PlotDataItem and link them together
-        PEN_01 = pg.mkPen(color=[0, 200, 0], width=3)
-        self.qcurve = HistoryChartCurve(
+        PEN_01 = pg.mkPen(color=[0, 0, 200], width=3)
+        self.tscurve_1 = self.tsgwin.addThreadSafeCurve(
+            "HistoryChartCurve",
             capacity=round(CHART_HISTORY_TIME * Fs),
-            linked_curve=self.pi_chart.plot(pen=PEN_01),
+            pen=PEN_01,
+        )
+
+        PEN_02 = pg.mkPen(color=[200, 0, 200], width=3)
+        self.tscurve_2 = self.tsgwin.addThreadSafeCurve(
+            "HistoryChartCurve",
+            capacity=round(CHART_HISTORY_TIME * Fs),
+            pen=PEN_02,
+        )
+
+        p = {"color": "#CCC", "font-size": "10pt"}
+        self.tsplot_2 = self.tsgwin.addThreadSafePlot()
+        self.tsplot_2.showGrid(x=1, y=1)
+        self.tsplot_2.setTitle("title")
+        self.tsplot_2.setLabel("bottom", text="history (sec)", **p)
+        self.tsplot_2.setLabel("left", text="amplitude", **p)
+        self.tsplot_2.setRange(
+            xRange=[-1.04 * CHART_HISTORY_TIME, CHART_HISTORY_TIME * 0.04],
+            yRange=[-1.1, 1.1],
+            disableAutoRange=True,
+        )
+
+        PEN_03 = pg.mkPen(color=[0, 200, 0], width=3)
+        self.tscurve_3 = self.tsgwin.addThreadSafeCurve(
+            "HistoryChartCurve",
+            capacity=round(CHART_HISTORY_TIME * Fs),
+            pen=PEN_03,
+        )
+
+        PEN_04 = pg.mkPen(color=[200, 0, 0], width=3)
+        self.tscurve_4 = self.tsgwin.addThreadSafeCurve(
+            "HistoryChartCurve",
+            capacity=round(CHART_HISTORY_TIME * Fs),
+            pen=PEN_04,
         )
 
         # `Obtained rates`
@@ -119,7 +147,7 @@ class MainWindow(QtWid.QWidget):
 
         # Round up frame
         hbox = QtWid.QHBoxLayout()
-        hbox.addWidget(self.gw_chart, 1)
+        hbox.addWidget(self.tsgwin, 1)
         hbox.addLayout(vbox, 0)
 
         # -------------------------
@@ -150,7 +178,7 @@ class MainWindow(QtWid.QWidget):
         )
 
         if reply == QtWid.QMessageBox.Yes:
-            self.qcurve.clear()
+            self.tsgwin.clear_curves()
 
     @QtCore.pyqtSlot()
     def process_qpbt_pause_chart(self):
@@ -204,21 +232,25 @@ def update_chart():
             window.chart_rate_accumulator = 0
 
     window.qlbl_chart_rate.setText("%.1f" % window.obtained_chart_rate_Hz)
-    window.pi_chart.setTitle("%s points" % f"{(window.qcurve.size[0]):,}")
-
-    window.qcurve.update_curve()
+    window.tsplot_1.setTitle("%s points" % f"{(window.tscurve_1.size[0]):,}")
+    window.tsgwin.update_curves()
 
 
 def DAQ_function():
-    if window.qcurve.size[0] == 0:
+    if window.tscurve_1.size[0] == 0:
         x_0 = 0
     else:
-        x_0 = window.qcurve._buffer_x[-1]
+        x_0 = window.tscurve_1._buffer_x[-1]
 
     x = (1 + np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3)) / Fs + x_0
-    y = np.sin(2 * np.pi * 0.5 * x)
-    window.qcurve.add_new_readings(x, y)
-    window.qcurve.set_data(x, y)
+    y_saw = np.mod(x, 1)
+    y_sine = np.sin(2 * np.pi * 0.5 * np.unwrap(x))
+
+    window.tscurve_1.add_new_readings(x, y_saw)
+    window.tscurve_2.add_new_readings(x, -y_saw)
+
+    window.tscurve_3.add_new_readings(x, y_sine)
+    window.tscurve_4.add_new_readings(x, -y_sine)
 
     return True
 

@@ -226,3 +226,107 @@ class PlotCurve(ThreadSafeCurve):
             shift_right_x_to_zero=False,
             use_ringbuffer=False,
         )
+
+
+# ------------------------------------------------------------------------------
+#   ThreadSafeGraphicsWindow
+# ------------------------------------------------------------------------------
+
+
+class ThreadSafeGraphicsWindow(pg.GraphicsWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # self.gwin = pg.GraphicsWindow() # pyqtgraph.GraphicsWindow()
+        self.plots = list()  # list of pyqtgraph.PlotItem()
+        self.curves = list()  # list of pyqtgraph.PlotDataItem()
+        self.tcurves = list()  # list of [plot_idx, ThreadSafeCurve()]
+
+    def addThreadSafePlot(self, *args, **kwargs) -> pg.PlotItem:
+        self.plots.append(self.addPlot(*args, **kwargs))
+
+        return self.plots[-1]
+
+    def addThreadSafeCurve(
+        self, curve_type: str, capacity: int, *args, **kwargs
+    ) -> ThreadSafeCurve:
+        if not (
+            curve_type == "HistoryChartCurve"
+            or curve_type == "BufferedPlotCurve"
+            or curve_type == "PlotCurve"
+        ):
+            raise TypeError("Unknown curve type. Should either be ...")
+
+        self.curves.append(self.plots[-1].plot(*args, **kwargs))
+
+        plot_idx = len(self.plots) - 1
+        if curve_type == "HistoryChartCurve":
+            self.tcurves.append(
+                [
+                    plot_idx,
+                    HistoryChartCurve(
+                        capacity=capacity, linked_curve=self.curves[-1]
+                    ),
+                ]
+            )
+        elif curve_type == "BufferedPlotCurve":
+            self.tcurves.append(
+                [
+                    plot_idx,
+                    BufferedPlotCurve(
+                        capacity=capacity, linked_curve=self.curves[-1]
+                    ),
+                ]
+            )
+        elif curve_type == "PlotCurve":
+            self.tcurves.append(
+                [
+                    plot_idx,
+                    PlotCurve(capacity=capacity, linked_curve=self.curves[-1]),
+                ]
+            )
+
+        return self.tcurves[-1][1]
+
+    # --------------------------------------------------------------------------
+    #   update_curves
+    # --------------------------------------------------------------------------
+
+    def update_curves(self, curve_idx=None, plot_idx=None):
+        if plot_idx is None and curve_idx is None:
+            # Update all curves
+            for curve in self.tcurves:
+                curve[1].update_curve()
+
+        elif plot_idx is not None:
+            # Update those curves belonging to plot number ``plot_idx```
+            for curve in self.tcurves:
+                if curve[0] == plot_idx:
+                    curve[1].update_curve()
+
+        elif curve_idx is not None:
+            # Update curve belonging to curve number ``curve_idx```
+            self.tcurves[curve_idx][1].update_curve()
+
+    # --------------------------------------------------------------------------
+    #   clear_curves
+    # --------------------------------------------------------------------------
+
+    def clear_curves(self, curve_idx=None, plot_idx=None):
+        if plot_idx is None and curve_idx is None:
+            # Clear all curves
+            for curve in self.tcurves:
+                curve[1].clear()
+
+        elif plot_idx is not None:
+            # Clear those curves belonging to plot number ``plot_idx```
+            if not 0 <= plot_idx < len(self.plots):
+                raise IndexError("list index out of range")
+
+            for curve in self.tcurves:
+                if curve[0] == plot_idx:
+                    curve[1].clear()
+
+        elif curve_idx is not None:
+            # Clear curve belonging to curve number ``curve_idx```
+            self.tcurves[curve_idx][1].clear()
