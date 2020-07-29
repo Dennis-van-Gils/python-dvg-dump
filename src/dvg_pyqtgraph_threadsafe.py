@@ -177,6 +177,9 @@ class ThreadSafeCurve(object):
         locker.unlock()
 
         self.update()
+        
+    def set_visible(self, state: bool = True):
+        self.curve.setVisible(state)
 
     @property
     def size(self):

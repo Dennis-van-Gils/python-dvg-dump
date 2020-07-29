@@ -16,7 +16,7 @@ from dvg_pyqtgraph_threadsafe import (
     PlotCurve,
 )
 
-USE_OPENGL = True
+USE_OPENGL = False
 if USE_OPENGL:
     print("OpenGL acceleration: Enabled")
     pg.setConfigOptions(useOpenGL=True)
@@ -26,7 +26,7 @@ if USE_OPENGL:
 pg.setConfigOption("leftButtonPan", False)
 
 # Constants
-Fs = 10000  # Sampling rate of the simulated data [Hz]
+Fs = 1000  # Sampling rate of the simulated data [Hz]
 WORKER_DAQ_INTERVAL_MS = round(1000 / 100)  # [ms]
 CHART_DRAW_INTERVAL_MS = round(1000 / 50)  # [ms]
 CHART_HISTORY_TIME = 10  # 10 [s]
@@ -123,10 +123,11 @@ class MainWindow(QtWid.QWidget):
         self.legend_box = Legend_box(
             text=["saw+", "saw-", "sine+", "sine-"],
             pen=[PEN_01, PEN_02, PEN_03, PEN_04],
-            checked=[True, True, True, True],
+            checked=[False, True, True, True],
         )
+        self.set_visibility_curves()
         for chkb in self.legend_box.chkbs:
-            chkb.clicked.connect(self.process_chkbs_legend_box)
+            chkb.clicked.connect(self.set_visibility_curves)
 
         qgrp_legend = QtWid.QGroupBox("Legend")
         qgrp_legend.setStyleSheet(SS_GROUP)
@@ -194,21 +195,19 @@ class MainWindow(QtWid.QWidget):
             self.paused = True
 
     @QtCore.pyqtSlot()
-    def process_chkbs_legend_box(self):
-        if self.paused:
-            #self.update_curves()  # Force update
-            for idx, tscurve in enumerate(self.tscurves):
-                tscurve.curve.setVisible(self.legend_box.chkbs[idx].isChecked())
-
-    @QtCore.pyqtSlot()
     def update_GUI(self):
         self.qlbl_DAQ_rate.setText("%.1f" % qdev.obtained_DAQ_rate_Hz)
 
+    @QtCore.pyqtSlot()
     def update_curves(self):
         for idx, tscurve in enumerate(self.tscurves):
             tscurve.update()
-            tscurve.curve.setVisible(self.legend_box.chkbs[idx].isChecked())
-
+            
+    @QtCore.pyqtSlot()
+    def set_visibility_curves(self):
+        for idx, tscurve in enumerate(self.tscurves):
+            tscurve.set_visible(self.legend_box.chkbs[idx].isChecked())
+            
     @QtCore.pyqtSlot()
     def update_charts(self):
         # Keep track of the obtained chart rate
