@@ -196,7 +196,9 @@ class MainWindow(QtWid.QWidget):
     @QtCore.pyqtSlot()
     def process_chkbs_legend_box(self):
         if self.paused:
-            self.update_curves()  # Force update
+            #self.update_curves()  # Force update
+            for idx, tscurve in enumerate(self.tscurves):
+                tscurve.curve.setVisible(self.legend_box.chkbs[idx].isChecked())
 
     @QtCore.pyqtSlot()
     def update_GUI(self):
