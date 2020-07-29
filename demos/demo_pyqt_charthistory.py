@@ -128,20 +128,9 @@ class MainWindow(QtWid.QWidget):
         for chkb in self.legend_box.chkbs:
             chkb.clicked.connect(self.process_chkbs_legend_box)
 
-        # `Options`
-        self.qpbt_option_1 = QtWid.QPushButton("Option 1")
-        self.qpbt_option_1.clicked.connect(self.process_qpbt_option_1)
-        self.qpbt_option_2 = QtWid.QPushButton("Option 2")
-        self.qpbt_option_2.clicked.connect(self.process_qpbt_option_2)
-
-        grid = QtWid.QGridLayout()
-        grid.addWidget(self.qpbt_option_1, 0, 0)
-        grid.addWidget(self.qpbt_option_2, 1, 0)
-        grid.setAlignment(QtCore.Qt.AlignTop)
-
-        qgrp_options = QtWid.QGroupBox("Options")
-        qgrp_options.setStyleSheet(SS_GROUP)
-        qgrp_options.setLayout(grid)
+        qgrp_legend = QtWid.QGroupBox("Legend")
+        qgrp_legend.setStyleSheet(SS_GROUP)
+        qgrp_legend.setLayout(self.legend_box.grid)
 
         # 'Chart'
         self.qpbt_pause_chart = QtWid.QPushButton("Pause", checkable=True)
@@ -160,8 +149,7 @@ class MainWindow(QtWid.QWidget):
 
         vbox = QtWid.QVBoxLayout()
         vbox.addLayout(grid_rates)
-        vbox.addLayout(self.legend_box.grid)
-        vbox.addWidget(qgrp_options)
+        vbox.addWidget(qgrp_legend)
         vbox.addWidget(qgrp_chart)
         vbox.addStretch()
 
@@ -209,14 +197,6 @@ class MainWindow(QtWid.QWidget):
     def process_chkbs_legend_box(self):
         if self.paused:
             self.update_curves()  # Force update
-
-    @QtCore.pyqtSlot()
-    def process_qpbt_option_1(self):
-        print("option 2")
-
-    @QtCore.pyqtSlot()
-    def process_qpbt_option_2(self):
-        print("option 3")
 
     @QtCore.pyqtSlot()
     def update_GUI(self):
