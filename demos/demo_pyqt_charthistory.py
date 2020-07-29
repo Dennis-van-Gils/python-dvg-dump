@@ -9,8 +9,12 @@ from PyQt5 import QtWidgets as QtWid
 import pyqtgraph as pg
 
 from dvg_qdeviceio import QDeviceIO
-from dvg_pyqt_controls import SS_GROUP
-from dvg_pyqtgraph_threadsafe import ThreadSafeGraphicsWindow
+from dvg_pyqt_controls import Legend_box, SS_GROUP
+from dvg_pyqtgraph_threadsafe import (
+    HistoryChartCurve,
+    BufferedPlotCurve,
+    PlotCurve,
+)
 
 USE_OPENGL = True
 if USE_OPENGL:
@@ -39,59 +43,65 @@ class MainWindow(QtWid.QWidget):
         self.setGeometry(350, 50, 800, 660)
         self.setWindowTitle("ChartHistory demo")
 
-        self.tsgwin = ThreadSafeGraphicsWindow()
+        # Keep track of the obtained chart refresh rate
+        self.obtained_chart_rate_Hz = np.nan
+        self.qet_chart = QtCore.QElapsedTimer()
+        self.chart_rate_accumulator = 0
+
+        # Pause/unpause charts
+        self.paused = False
+
+        # GraphicsWindow
+        capacity = round(CHART_HISTORY_TIME * Fs)
+        PEN_01 = pg.mkPen(color=[0, 255, 255], width=3)
+        PEN_02 = pg.mkPen(color=[255, 0, 255], width=3)
+        PEN_03 = pg.mkPen(color=[0, 255, 0], width=3)
+        PEN_04 = pg.mkPen(color=[255, 0, 0], width=3)
+
+        self.gw = pg.GraphicsWindow()
 
         p = {"color": "#CCC", "font-size": "10pt"}
-        self.tsplot_1 = self.tsgwin.addThreadSafePlot()
-        self.tsplot_1.showGrid(x=1, y=1)
-        self.tsplot_1.setTitle("title")
-        self.tsplot_1.setLabel("bottom", text="history (sec)", **p)
-        self.tsplot_1.setLabel("left", text="amplitude", **p)
-        self.tsplot_1.setRange(
+        self.plot_1 = self.gw.addPlot()
+        self.plot_1.showGrid(x=1, y=1)
+        self.plot_1.setTitle("title")
+        self.plot_1.setLabel("bottom", text="history (sec)", **p)
+        self.plot_1.setLabel("left", text="amplitude", **p)
+        self.plot_1.setRange(
             xRange=[-1.04 * CHART_HISTORY_TIME, CHART_HISTORY_TIME * 0.04],
             yRange=[-1.1, 1.1],
             disableAutoRange=True,
         )
 
-        PEN_01 = pg.mkPen(color=[0, 0, 200], width=3)
-        self.tscurve_1 = self.tsgwin.addThreadSafeCurve(
-            "HistoryChartCurve",
-            capacity=round(CHART_HISTORY_TIME * Fs),
-            pen=PEN_01,
-        )
-
-        PEN_02 = pg.mkPen(color=[200, 0, 200], width=3)
-        self.tscurve_2 = self.tsgwin.addThreadSafeCurve(
-            "HistoryChartCurve",
-            capacity=round(CHART_HISTORY_TIME * Fs),
-            pen=PEN_02,
-        )
-
-        p = {"color": "#CCC", "font-size": "10pt"}
-        self.tsplot_2 = self.tsgwin.addThreadSafePlot()
-        self.tsplot_2.showGrid(x=1, y=1)
-        self.tsplot_2.setTitle("title")
-        self.tsplot_2.setLabel("bottom", text="history (sec)", **p)
-        self.tsplot_2.setLabel("left", text="amplitude", **p)
-        self.tsplot_2.setRange(
+        self.plot_2 = self.gw.addPlot()
+        self.plot_2.showGrid(x=1, y=1)
+        self.plot_2.setTitle("title")
+        self.plot_2.setLabel("bottom", text="history (sec)", **p)
+        self.plot_2.setLabel("left", text="amplitude", **p)
+        self.plot_2.setRange(
             xRange=[-1.04 * CHART_HISTORY_TIME, CHART_HISTORY_TIME * 0.04],
             yRange=[-1.1, 1.1],
             disableAutoRange=True,
         )
 
-        PEN_03 = pg.mkPen(color=[0, 200, 0], width=3)
-        self.tscurve_3 = self.tsgwin.addThreadSafeCurve(
-            "HistoryChartCurve",
-            capacity=round(CHART_HISTORY_TIME * Fs),
-            pen=PEN_03,
+        self.tscurve_1 = HistoryChartCurve(
+            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_01),
+        )
+        self.tscurve_2 = HistoryChartCurve(
+            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_02),
+        )
+        self.tscurve_3 = HistoryChartCurve(
+            capacity=capacity, linked_curve=self.plot_2.plot(pen=PEN_03),
+        )
+        self.tscurve_4 = HistoryChartCurve(
+            capacity=capacity, linked_curve=self.plot_2.plot(pen=PEN_04),
         )
 
-        PEN_04 = pg.mkPen(color=[200, 0, 0], width=3)
-        self.tscurve_4 = self.tsgwin.addThreadSafeCurve(
-            "HistoryChartCurve",
-            capacity=round(CHART_HISTORY_TIME * Fs),
-            pen=PEN_04,
-        )
+        self.tscurves = [
+            self.tscurve_1,
+            self.tscurve_2,
+            self.tscurve_3,
+            self.tscurve_4,
+        ]
 
         # `Obtained rates`
         self.qlbl_DAQ_rate = QtWid.QLabel("")
@@ -108,6 +118,15 @@ class MainWindow(QtWid.QWidget):
         grid_rates.addWidget(QtWid.QLabel("Hz"), 0, 2)
         grid_rates.addWidget(QtWid.QLabel("Hz"), 1, 2)
         grid_rates.setAlignment(QtCore.Qt.AlignTop)
+
+        # 'Legend'
+        self.legend_box = Legend_box(
+            text=["saw+", "saw-", "sine+", "sine-"],
+            pen=[PEN_01, PEN_02, PEN_03, PEN_04],
+            checked=[True, True, True, True],
+        )
+        for chkb in self.legend_box.chkbs:
+            chkb.clicked.connect(self.process_chkbs_legend_box)
 
         # `Options`
         self.qpbt_option_1 = QtWid.QPushButton("Option 1")
@@ -141,13 +160,14 @@ class MainWindow(QtWid.QWidget):
 
         vbox = QtWid.QVBoxLayout()
         vbox.addLayout(grid_rates)
+        vbox.addLayout(self.legend_box.grid)
         vbox.addWidget(qgrp_options)
         vbox.addWidget(qgrp_chart)
         vbox.addStretch()
 
         # Round up frame
         hbox = QtWid.QHBoxLayout()
-        hbox.addWidget(self.tsgwin, 1)
+        hbox.addWidget(self.gw, 1)
         hbox.addLayout(vbox, 0)
 
         # -------------------------
@@ -156,11 +176,6 @@ class MainWindow(QtWid.QWidget):
 
         vbox = QtWid.QVBoxLayout(self)
         vbox.addLayout(hbox, stretch=1)
-
-        # Keep track of the obtained chart refresh rate
-        self.obtained_chart_rate_Hz = np.nan
-        self.qet_chart = QtCore.QElapsedTimer()
-        self.chart_rate_accumulator = 0
 
     # --------------------------------------------------------------------------
     #   Handle controls
@@ -178,16 +193,22 @@ class MainWindow(QtWid.QWidget):
         )
 
         if reply == QtWid.QMessageBox.Yes:
-            self.tsgwin.clear_curves()
+            for tscurve in self.tscurves:
+                tscurve.clear()
 
     @QtCore.pyqtSlot()
     def process_qpbt_pause_chart(self):
-        if timer_chart.isActive():
-            self.qpbt_pause_chart.setText("Unpause")
-            timer_chart.stop()
-        else:
+        if self.paused:
             self.qpbt_pause_chart.setText("Pause")
-            timer_chart.start()
+            self.paused = False
+        else:
+            self.qpbt_pause_chart.setText("Unpause")
+            self.paused = True
+
+    @QtCore.pyqtSlot()
+    def process_chkbs_legend_box(self):
+        if self.paused:
+            self.update_curves()  # Force update
 
     @QtCore.pyqtSlot()
     def process_qpbt_option_1(self):
@@ -196,6 +217,41 @@ class MainWindow(QtWid.QWidget):
     @QtCore.pyqtSlot()
     def process_qpbt_option_2(self):
         print("option 3")
+
+    @QtCore.pyqtSlot()
+    def update_GUI(self):
+        self.qlbl_DAQ_rate.setText("%.1f" % qdev.obtained_DAQ_rate_Hz)
+
+    def update_curves(self):
+        for idx, tscurve in enumerate(self.tscurves):
+            tscurve.update()
+            tscurve.curve.setVisible(self.legend_box.chkbs[idx].isChecked())
+
+    @QtCore.pyqtSlot()
+    def update_charts(self):
+        # Keep track of the obtained chart rate
+        if not self.qet_chart.isValid():
+            self.qet_chart.start()
+        else:
+            self.chart_rate_accumulator += 1
+            dT = self.qet_chart.elapsed()
+
+            if dT >= 1000:  # Evaluate every N elapsed milliseconds
+                self.qet_chart.restart()
+                try:
+                    self.obtained_chart_rate_Hz = (
+                        self.chart_rate_accumulator / dT * 1e3
+                    )
+                except ZeroDivisionError:
+                    self.obtained_chart_rate_Hz = np.nan
+
+                self.chart_rate_accumulator = 0
+
+        self.qlbl_chart_rate.setText("%.1f" % self.obtained_chart_rate_Hz)
+        self.plot_1.setTitle("%s points" % f"{(self.tscurve_1.size[0]):,}")
+
+        if not self.paused:
+            self.update_curves()
 
 
 # ------------------------------------------------------------------------------
@@ -206,34 +262,6 @@ class MainWindow(QtWid.QWidget):
 def about_to_quit():
     qdev.quit()
     timer_chart.stop()
-
-
-def update_GUI():
-    window.qlbl_DAQ_rate.setText("%.1f" % qdev.obtained_DAQ_rate_Hz)
-
-
-def update_chart():
-    # Keep track of the obtained chart rate
-    if not window.qet_chart.isValid():
-        window.qet_chart.start()
-    else:
-        window.chart_rate_accumulator += 1
-        dT = window.qet_chart.elapsed()
-
-        if dT >= 1000:  # Evaluate every N elapsed milliseconds
-            window.qet_chart.restart()
-            try:
-                window.obtained_chart_rate_Hz = (
-                    window.chart_rate_accumulator / dT * 1e3
-                )
-            except ZeroDivisionError:
-                window.obtained_chart_rate_Hz = np.nan
-
-            window.chart_rate_accumulator = 0
-
-    window.qlbl_chart_rate.setText("%.1f" % window.obtained_chart_rate_Hz)
-    window.tsplot_1.setTitle("%s points" % f"{(window.tscurve_1.size[0]):,}")
-    window.tsgwin.update_curves()
 
 
 def DAQ_function():
@@ -248,7 +276,6 @@ def DAQ_function():
 
     window.tscurve_1.add_new_readings(x, y_saw)
     window.tscurve_2.add_new_readings(x, -y_saw)
-
     window.tscurve_3.add_new_readings(x, y_sine)
     window.tscurve_4.add_new_readings(x, -y_sine)
 
@@ -277,12 +304,12 @@ if __name__ == "__main__":
     qdev.create_worker_DAQ(
         DAQ_interval_ms=WORKER_DAQ_INTERVAL_MS, DAQ_function=DAQ_function
     )
-    qdev.signal_DAQ_updated.connect(update_GUI)
+    qdev.signal_DAQ_updated.connect(window.update_GUI)
     qdev.start()
 
     # Chart refresh timer
     timer_chart = QtCore.QTimer(timerType=QtCore.Qt.PreciseTimer)
-    timer_chart.timeout.connect(update_chart)
+    timer_chart.timeout.connect(window.update_charts)
     timer_chart.start(CHART_DRAW_INTERVAL_MS)
 
     window.show()
