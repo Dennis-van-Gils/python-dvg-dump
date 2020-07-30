@@ -19,6 +19,34 @@ circular/ring buffer or a regular array buffer:
     - `PlotCurve`
         Regular array buffer. Data will be plotted as is.
 
+Usage::
+    import sys
+    from PyQt5 import QtWidgets
+    import pyqtgraph as pg
+    from dvg_pyqtgraph_threadsafe import HistoryChartCurve
+
+    class MainWindow(QtWidgets.QWidget):
+        def __init__(self, parent=None, **kwargs):
+            super().__init__(parent, **kwargs)
+
+            self.gw = pg.GraphicsWindow()
+            self.plot_1 = self.gw.addPlot()
+            self.tscurve_1 = HistoryChartCurve(
+                capacity=5,
+                linked_curve=self.plot_1.plot(pen=pg.mkPen(color=[0, 255, 255])),
+            )
+
+            grid = QtWidgets.QGridLayout(self)
+            grid.addWidget(self.gw)
+
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+
+    window.tscurve_1.extend_data([1, 2, 3, 4, 5], [10, 20, 30, 40, 50])
+    window.tscurve_1.update()
+
+    window.show()
+    sys.exit(app.exec_())
 """
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
@@ -200,6 +228,9 @@ class ThreadSafeCurve(object):
         locker.unlock()
 
         self.update()
+
+    def is_visible(self) -> bool:
+        return self.curve.isVisible()
 
     def set_visible(self, state: bool = True):
         self.curve.setVisible(state)

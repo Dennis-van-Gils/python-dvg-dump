@@ -16,7 +16,7 @@ from dvg_pyqtgraph_threadsafe import (
     PlotCurve,
 )
 
-USE_OPENGL = False
+USE_OPENGL = True
 if USE_OPENGL:
     print("OpenGL acceleration: Enabled")
     pg.setConfigOptions(useOpenGL=True)
@@ -26,7 +26,7 @@ if USE_OPENGL:
 pg.setConfigOption("leftButtonPan", False)
 
 # Constants
-Fs = 1000  # Sampling rate of the simulated data [Hz]
+Fs = 10000  # Sampling rate of the simulated data [Hz]
 WORKER_DAQ_INTERVAL_MS = round(1000 / 100)  # [ms]
 CHART_DRAW_INTERVAL_MS = round(1000 / 50)  # [ms]
 CHART_HISTORY_TIME = 10  # 10 [s]
@@ -41,7 +41,7 @@ class MainWindow(QtWid.QWidget):
         super().__init__(parent, **kwargs)
 
         self.setGeometry(350, 50, 800, 660)
-        self.setWindowTitle("ChartHistory demo")
+        self.setWindowTitle("Demo: dvg_pyqtgraph_threadsafe")
 
         # Keep track of the obtained chart refresh rate
         self.obtained_chart_rate_Hz = np.nan
@@ -53,17 +53,16 @@ class MainWindow(QtWid.QWidget):
 
         # GraphicsWindow
         capacity = round(CHART_HISTORY_TIME * Fs)
-        PEN_01 = pg.mkPen(color=[0, 255, 255], width=3)
-        PEN_02 = pg.mkPen(color=[255, 0, 255], width=3)
-        PEN_03 = pg.mkPen(color=[0, 255, 0], width=3)
-        PEN_04 = pg.mkPen(color=[255, 0, 0], width=3)
+        PEN_1 = pg.mkPen(color=[255, 30, 180], width=3)
+        PEN_2 = pg.mkPen(color=[0, 255, 255], width=3)
+        PEN_3 = pg.mkPen(color=[255, 255, 90], width=3)
 
         self.gw = pg.GraphicsWindow()
 
         p = {"color": "#CCC", "font-size": "10pt"}
         self.plot_1 = self.gw.addPlot()
         self.plot_1.showGrid(x=1, y=1)
-        self.plot_1.setTitle("title")
+        self.plot_1.setTitle("HistoryChart")
         self.plot_1.setLabel("bottom", text="history (sec)", **p)
         self.plot_1.setLabel("left", text="amplitude", **p)
         self.plot_1.setRange(
@@ -74,34 +73,37 @@ class MainWindow(QtWid.QWidget):
 
         self.plot_2 = self.gw.addPlot()
         self.plot_2.showGrid(x=1, y=1)
-        self.plot_2.setTitle("title")
-        self.plot_2.setLabel("bottom", text="history (sec)", **p)
-        self.plot_2.setLabel("left", text="amplitude", **p)
+        self.plot_2.setTitle("BufferedPlot: Lissajous")
+        self.plot_2.setLabel("bottom", text="x", **p)
+        self.plot_2.setLabel("left", text="y", **p)
         self.plot_2.setRange(
-            xRange=[-1.04 * CHART_HISTORY_TIME, CHART_HISTORY_TIME * 0.04],
-            yRange=[-1.1, 1.1],
-            disableAutoRange=True,
+            xRange=[-1.1, 1.1], yRange=[-1.1, 1.1], disableAutoRange=True,
         )
 
         self.tscurve_1 = HistoryChartCurve(
-            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_01),
+            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_1),
         )
         self.tscurve_2 = HistoryChartCurve(
-            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_02),
+            capacity=capacity, linked_curve=self.plot_1.plot(pen=PEN_2),
         )
-        self.tscurve_3 = HistoryChartCurve(
-            capacity=capacity, linked_curve=self.plot_2.plot(pen=PEN_03),
-        )
-        self.tscurve_4 = HistoryChartCurve(
-            capacity=capacity, linked_curve=self.plot_2.plot(pen=PEN_04),
+        self.tscurve_3 = BufferedPlotCurve(
+            capacity=capacity, linked_curve=self.plot_2.plot(pen=PEN_3),
         )
 
         self.tscurves = [
             self.tscurve_1,
             self.tscurve_2,
             self.tscurve_3,
-            self.tscurve_4,
         ]
+
+        # Extra marker to indicate tracking position of Lissajous curve
+        self.lissajous_marker = self.plot_2.plot(
+            pen=None,
+            symbol="o",
+            symbolPen=None,
+            symbolBrush=pg.mkBrush([255, 30, 180]),
+            symbolSize=16,
+        )
 
         # `Obtained rates`
         self.qlbl_DAQ_rate = QtWid.QLabel("")
@@ -109,21 +111,28 @@ class MainWindow(QtWid.QWidget):
         self.qlbl_DAQ_rate.setMinimumWidth(50)
         self.qlbl_chart_rate = QtWid.QLabel("")
         self.qlbl_chart_rate.setAlignment(QtCore.Qt.AlignRight)
+        self.qlbl_num_points = QtWid.QLabel("")
+        self.qlbl_num_points.setAlignment(QtCore.Qt.AlignRight)
 
+        # fmt: off
         grid_rates = QtWid.QGridLayout()
-        grid_rates.addWidget(QtWid.QLabel("DAQ:"), 0, 0)
+        grid_rates.addWidget(QtWid.QLabel("DAQ:")  , 0, 0)
+        grid_rates.addWidget(self.qlbl_DAQ_rate    , 0, 1)
+        grid_rates.addWidget(QtWid.QLabel("Hz")    , 0, 2)
         grid_rates.addWidget(QtWid.QLabel("chart:"), 1, 0)
-        grid_rates.addWidget(self.qlbl_DAQ_rate, 0, 1)
-        grid_rates.addWidget(self.qlbl_chart_rate, 1, 1)
-        grid_rates.addWidget(QtWid.QLabel("Hz"), 0, 2)
-        grid_rates.addWidget(QtWid.QLabel("Hz"), 1, 2)
+        grid_rates.addWidget(self.qlbl_chart_rate  , 1, 1)
+        grid_rates.addWidget(QtWid.QLabel("Hz")    , 1, 2)
+        grid_rates.addWidget(QtWid.QLabel("drawn:"), 2, 0)
+        grid_rates.addWidget(self.qlbl_num_points  , 2, 1)
+        grid_rates.addWidget(QtWid.QLabel("pnts")  , 2, 2)
         grid_rates.setAlignment(QtCore.Qt.AlignTop)
+        # fmt: on
 
         # 'Legend'
         self.legend_box = Legend_box(
-            text=["saw+", "saw-", "sine+", "sine-"],
-            pen=[PEN_01, PEN_02, PEN_03, PEN_04],
-            checked=[False, True, True, True],
+            text=["wave 1", "wave 2", "Lissajous"],
+            pen=[PEN_1, PEN_2, PEN_3],
+            checked=[True, True, True],
         )
         self.set_visibility_curves()
         for chkb in self.legend_box.chkbs:
@@ -200,14 +209,35 @@ class MainWindow(QtWid.QWidget):
 
     @QtCore.pyqtSlot()
     def update_curves(self):
-        for idx, tscurve in enumerate(self.tscurves):
+        for tscurve in self.tscurves:
             tscurve.update()
-            
+
+        if len(self.tscurve_3.curve.xData) > 0:
+            self.lissajous_marker.setData(
+                [self.tscurve_3.curve.xData[-1]],
+                [self.tscurve_3.curve.yData[-1]],
+            )
+
+    def update_num_points_drawn(self):
+        # Keep track of the number of drawn points
+        num_points = 0
+        for tscurve in self.tscurves:
+            if tscurve.is_visible():
+                num_points += (
+                    0
+                    if tscurve.curve.xData is None
+                    else len(tscurve.curve.xData)
+                )
+
+        self.qlbl_num_points.setText("%s" % f"{(num_points):,}")
+
     @QtCore.pyqtSlot()
     def set_visibility_curves(self):
         for idx, tscurve in enumerate(self.tscurves):
             tscurve.set_visible(self.legend_box.chkbs[idx].isChecked())
-            
+
+        self.update_num_points_drawn()
+
     @QtCore.pyqtSlot()
     def update_charts(self):
         # Keep track of the obtained chart rate
@@ -228,10 +258,10 @@ class MainWindow(QtWid.QWidget):
 
                 self.chart_rate_accumulator = 0
 
-        self.qlbl_chart_rate.setText("%.1f" % self.obtained_chart_rate_Hz)
-        self.plot_1.setTitle("%s points" % f"{(self.tscurve_1.size[0]):,}")
-
+        # Update curves
         if not self.paused:
+            self.qlbl_chart_rate.setText("%.1f" % self.obtained_chart_rate_Hz)
+            self.update_num_points_drawn()
             self.update_curves()
 
 
@@ -247,18 +277,17 @@ def about_to_quit():
 
 def DAQ_function():
     if window.tscurve_1.size[0] == 0:
-        x_0 = 0
+        x_ = 0
     else:
-        x_0 = window.tscurve_1._buffer_x[-1]
+        x_ = window.tscurve_1._buffer_x[-1]
 
-    x = (1 + np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3)) / Fs + x_0
-    y_saw = np.mod(x, 1)
-    y_sine = np.sin(2 * np.pi * 0.5 * np.unwrap(x))
+    x = (1 + np.arange(WORKER_DAQ_INTERVAL_MS * Fs / 1e3)) / Fs + x_
+    y_sin = np.sin(2 * np.pi * 0.5 * np.unwrap(x))
+    y_cos = np.cos(2 * np.pi * 0.9 * np.unwrap(x))
 
-    window.tscurve_1.add_new_readings(x, y_saw)
-    window.tscurve_2.add_new_readings(x, -y_saw)
-    window.tscurve_3.add_new_readings(x, y_sine)
-    window.tscurve_4.add_new_readings(x, -y_sine)
+    window.tscurve_1.extend_data(x, y_sin)
+    window.tscurve_2.extend_data(x, y_cos)
+    window.tscurve_3.extend_data(y_sin, y_cos)
 
     return True
 
