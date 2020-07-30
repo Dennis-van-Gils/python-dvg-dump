@@ -2,6 +2,37 @@
 # -*- coding: utf-8 -*-
 """Mishmash of PyQt5 stylesheets and custom controls that I personally use in
 many of my projects.
+
+
+TODO:
+    Add `toggle all/none` button to Legend_box. Make it optional.
+
+    window.qpbt_show_all_curves = QtWid.QPushButton("toggle", maximumWidth=70)
+    window.grid_show_curves.addWidget(
+        window.qpbt_show_all_curves, N_channels, 0
+    )
+    window.qpbt_show_all_curves.clicked.connect(
+        window.process_qpbt_show_all_curves
+    )
+
+    @QtCore.pyqtSlot()
+    def process_qpbt_show_all_curves(self):
+        # First: if any curve is hidden --> show all
+        # Second: if all curves are shown --> hide all
+
+        any_hidden = False
+        for i_ in range(N_channels):
+            if not self.chkbs_show_curves[i_].isChecked():
+                self.chkbs_show_curves[i_].setChecked(True)
+                any_hidden = True
+
+        if not any_hidden:
+            for i_ in range(N_channels):
+                self.chkbs_show_curves[i_].setChecked(False)
+
+    And don't forget to implement this in:
+        dvg_device.Keysight_3497xA_demo_logger.py
+        
 """
 __author__      = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
