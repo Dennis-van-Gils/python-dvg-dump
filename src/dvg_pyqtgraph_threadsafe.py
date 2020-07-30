@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Class ChartHistory provides a thread-safe history buffer for (x, y)-data
-points behind a PyQtGraph plot curve. Hence, the plot curve can now act as a
-history strip chart or Lissajous chart, whilst being fed with new data.
+"""Contains several classes to be used with the PyQtGraph library, providing
+thread-safe plotting `curves` to which data can be safely appended or set from
+out of any thread. The classes wrap around a :class:`pyqtgraph.PlotDataItem`
+class, called a `curve` for convenience.
 
-TODO: Only strip charts -- with the x-array always being shifted such that
-the right side is 0 -- are supported at the moment. I should implement
-a toggle for enabling/disabling this shift, such that Lissajous curves
-are also possible.
+The (x, y)-curve data is buffered internally to the class, relying on either a
+circular/ring buffer or a regular array buffer:
+    - `HistoryChartCurve`
+        Ring buffer. The plotted x-data will be shifted such that the
+        right-side is always set to 0. I.e., when `x` denotes time, the data is
+        plotted backwards in time, hence the name *history* chart. The most
+        recent data is on the right-side of the ring buffer.
 
-TODO: All thread-safe:
-History Chart, buffered, with x-data shifted such that right-side always == 0
-Buffered Plot, buffered, (x, y)-data as is, can also support Lissajous
-Plot, unbuffered, (x, y)-data as is (Note: was originally named DvG_pyqt_BufferedPlot.py)
+    - `BufferedPlotCurve`
+        Ring buffer. Data will be plotted as is.
+
+    - `PlotCurve`
+        Regular array buffer. Data will be plotted as is.
+
 """
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/..."
-__date__ = "22-07-2020"
+__date__ = "30-07-2020"
 __version__ = "1.0.0"
+
+from typing import Tuple
 
 import numpy as np
 from PyQt5 import QtCore
@@ -32,40 +40,55 @@ class ThreadSafeCurve(object):
         self,
         capacity: int,
         linked_curve: pg.PlotDataItem,
-        shift_right_x_to_zero: bool = True,
+        shift_right_x_to_zero: bool = False,
         use_ringbuffer: bool = True,
     ):
-        """Provides a thread-safe buffer for (x, y)-data points behind a
-        PyQtGraph plot curve. Hence, the plot curve can now act as a time-moving
-        strip chart or Lissajous chart.
+        """Provides the base class for a thread-safe plotting `curve` to which
+        (x, y)-data can be safely appended or set from out of any thread. It
+        will wrap around the passed argument `linked_curve` of type
+        :class:`pyqtgraph.PlotDataItem` and will manage the (x, y)-data buffers
+        underlying the curve.
 
-        The history buffer consists of two ring buffers of fixed capacity.
-        New readings are placed at the end (right-side) of the array, pushing
-        out the oldest readings when the buffer has reached its maximum capacity
-        (FIFO).
-
-        This class is thread-safe. Intended multithreaded operation: One thread
-        does the data acquisition and pushes new data points into the history
-        buffer by calling `add_new_reading(s)()`. Another thread performs the
-        GUI refresh by calling `update_curve()` which will redraw the curve.
+        Intended multithreaded operation: One thread does the data acquisition/
+        generation and pushes new data into the `ThreadSafeCurve`-buffers.
+        Another thread performs the GUI refresh by calling `update()`
+        which will redraw the curve according to the current buffer contents.
 
         Args:
-            capacity (int):
-                Max. number of (x, y)-data points the history buffer can store.
+            capacity (`int`):
+                Maximum number of (x, y)-data points the buffer can store.
 
             linked_curve (:class:`pyqtgraph.PlotDataItem`):
                 Instance of :class:`pyqtgraph.PlotDataItem` to plot the buffered
                 data out into.
 
+            shift_right_x_to_zero (`bool`, optional):
+                When plotting, should the x-data be shifted such that the
+                right-side is always set to 0? Useful for history charts.
+
+                Default: False
+
+            use_ringbuffer (`bool`, optional):
+                When True, the (x, y)-data buffers are each a ring buffer. New
+                readings are placed at the end (right-side) of the buffer,
+                pushing out the oldest readings when the buffer has reached its
+                maximum capacity (FIFO). Use methods `append_data` and
+                `extend_data` to push in new data.
+
+                When False, the (x, y)-data buffers are each a regular array
+                buffer. Use method `set_data` to set the data.
+
+                Default: True
+
         Attributes:
-            x_axis_divisor (float):
-                The x-data in the history buffer will be divided by this factor
-                when the plot curve is redrawn. Useful to, e.g., transform the
-                x-axis units from milliseconds to seconds or minutes.
+            x_axis_divisor (`float`):
+                The x-data in the buffer will be divided by this factor when the
+                plot curve is redrawn. Useful to, e.g., transform the x-axis
+                units from milliseconds to seconds or minutes.
 
                 Default: 1
 
-            y_axis_divisor (float):
+            y_axis_divisor (`float`):
                 Same functionality as x_axis_divisor.
 
                 Default: 1
@@ -107,8 +130,8 @@ class ThreadSafeCurve(object):
             else:
                 self.curve.setDownsampling(ds=1, auto=False, method="mean")
 
-    def add_new_reading(self, x, y):
-        """Add a single (x, y)-data point to the ring buffer.
+    def append_data(self, x, y):
+        """Append a single (x, y)-data point to the ring buffer.
         """
         if self._use_ringbuffer:
             locker = QtCore.QMutexLocker(self._mutex)
@@ -116,8 +139,8 @@ class ThreadSafeCurve(object):
             self._buffer_y.append(y)
             locker.unlock()
 
-    def add_new_readings(self, x_list, y_list):
-        """Add a list of (x, y)-data points to the ring buffer.
+    def extend_data(self, x_list, y_list):
+        """Extend the ring buffer with a list of (x, y)-data points.
         """
         if self._use_ringbuffer:
             locker = QtCore.QMutexLocker(self._mutex)
@@ -136,7 +159,7 @@ class ThreadSafeCurve(object):
 
     def update(self):
         """Update the data behind the curve, based on the current contents of
-        the history buffer, and redraw the curve on screen.
+        the buffer, and redraw the curve on screen.
         """
 
         # Create a snapshot of the buffered data. Fast operation.
@@ -177,17 +200,16 @@ class ThreadSafeCurve(object):
         locker.unlock()
 
         self.update()
-        
+
     def set_visible(self, state: bool = True):
         self.curve.setVisible(state)
 
     @property
-    def size(self):
+    def size(self) -> Tuple[int, int]:
         """Number of elements currently contained in the underlying (x, y)-
         buffers of the curve. Note that this is not neccesarily the number of
         elements of the currently drawn curve, but reflects the data buffer
-        behind it that will be drawn onto screen by the next call to
-        `update_curve()`.
+        behind it that will be drawn onto screen by the next call to `update`.
         """
         # fmt: off
         locker = QtCore.QMutexLocker(self._mutex) # pylint: disable=unused-variable
@@ -195,9 +217,24 @@ class ThreadSafeCurve(object):
         return (len(self._buffer_x), len(self._buffer_y))
 
 
+# ------------------------------------------------------------------------------
+#   Subclasses
+# ------------------------------------------------------------------------------
+
+
 class HistoryChartCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
-        """
+        """Provides a thread-safe curve with underlying ring buffers for the
+        (x, y)-data. New readings are placed at the end (right-side) of the
+        buffer, pushing out the oldest readings when the buffer has reached its
+        maximum capacity (FIFO). Use methods `append_data` and `extend_data` to
+        push in new data.
+
+        The plotted x-data will be shifted such that the right-side is always
+        set to 0. I.e., when `x` denotes time, the data is plotted backwards in
+        time, hence the name *history* chart.
+
+        See `ThreadSafeCurve` for more details.
         """
         super().__init__(
             capacity=capacity,
@@ -209,7 +246,13 @@ class HistoryChartCurve(ThreadSafeCurve):
 
 class BufferedPlotCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
-        """
+        """Provides a thread-safe curve with underlying ring buffers for the
+        (x, y)-data. New readings are placed at the end (right-side) of the
+        buffer, pushing out the oldest readings when the buffer has reached its
+        maximum capacity (FIFO). Use methods `append_data` and `extend_data` to
+        push in new data.
+
+        See `ThreadSafeCurve` for more details.
         """
         super().__init__(
             capacity=capacity,
@@ -221,7 +264,10 @@ class BufferedPlotCurve(ThreadSafeCurve):
 
 class PlotCurve(ThreadSafeCurve):
     def __init__(self, capacity: int, linked_curve: pg.PlotDataItem = None):
-        """
+        """Provides a thread-safe curve with underlying regular array buffers
+        for the (x, y)-data. Use method `set_data` to set the data.
+
+        See `ThreadSafeCurve` for more details.
         """
         super().__init__(
             capacity=capacity,
