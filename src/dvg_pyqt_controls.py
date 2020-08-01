@@ -40,6 +40,8 @@ __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pyqt-controls"
 __date__ = "31-07-2020"
 __version__ = "1.0.0"
 
+from typing import List
+
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QCheckBox
 
@@ -249,9 +251,9 @@ SS_TITLE = (
 class LegendBox(QWidget):
     def __init__(
         self,
-        text="",
-        pen=QtGui.QPen(QtCore.Qt.red),
-        checked=True,
+        texts: List[str],
+        pens: List[QtGui.QPen],
+        checks: List[bool] = True,
         bg_color=QtGui.QColor(36, 36, 36),
         box_width=40,
         box_height=23,
@@ -259,38 +261,43 @@ class LegendBox(QWidget):
     ):
         super().__init__(parent=parent)
 
-        if not isinstance(text, list):
-            text = [text]
-        if not isinstance(pen, list):
-            pen = [pen]
-        if not isinstance(checked, list):
-            checked = [checked]
+        if not isinstance(texts, list):
+            texts = [texts]
+        if not isinstance(pens, list):
+            pens = [pens]
+        if not isinstance(checks, list):
+            checks = [checks]
 
         self.chkbs = []
         self.painted_lines = []
         self.grid = QGridLayout(spacing=1)
 
-        for i in range(len(text)):
+        for idx, text in enumerate(texts):
             try:
-                _checked = checked[i]
+                _checked = checks[idx]
             except:  # pylint: disable=bare-except
                 _checked = True
 
             chkb = QCheckBox(
-                text[i], layoutDirection=QtCore.Qt.LeftToRight, checked=_checked
+                text=text,
+                layoutDirection=QtCore.Qt.LeftToRight,
+                checked=_checked,
             )
             self.chkbs.append(chkb)
 
             PaintedLine = self.PaintedLine(
-                pen[i], bg_color, box_width, box_height
+                pen=pens[idx],
+                bg_color=bg_color,
+                box_width=box_width,
+                box_height=box_height,
             )
             self.painted_lines.append(PaintedLine)
 
             p = {"alignment": QtCore.Qt.AlignLeft}
-            self.grid.addWidget(chkb, i, 0, **p)
-            self.grid.addWidget(PaintedLine, i, 1)
+            self.grid.addWidget(chkb, idx, 0, **p)
+            self.grid.addWidget(PaintedLine, idx, 1)
             self.grid.setColumnStretch(0, 0)
-            self.grid.setColumnStretch(1, 1)
+            self.grid.setColumnStretch(1, 0)  # Was (1, 1) before PyPi
             self.grid.setAlignment(QtCore.Qt.AlignTop)
 
     class PaintedLine(QWidget):
@@ -366,6 +373,24 @@ def create_LED_indicator_rect(initial_state=False, text="") -> QPushButton:
     button = QPushButton(text=text, checkable=True, enabled=False)
     button.setStyleSheet(SS_LED_RECT)
     button.setChecked(initial_state)
+    return button
+
+
+def create_error_LED(text="") -> QPushButton:
+    button = QPushButton(text=text, checkable=True, enabled=False)
+    button.setStyleSheet(SS_ERROR_LED)
+    return button
+
+
+def create_tiny_LED(text="") -> QPushButton:
+    button = QPushButton(text=text, checkable=True, enabled=False)
+    button.setStyleSheet(SS_TINY_LED)
+    return button
+
+
+def create_tiny_error_LED(text="") -> QPushButton:
+    button = QPushButton(text=text, checkable=True, enabled=False)
+    button.setStyleSheet(SS_TINY_ERROR_LED)
     return button
 
 
@@ -470,20 +495,3 @@ def create_Toggle_button_3(text="", minimumHeight=40) -> QPushButton:
 
     return button
 
-
-def create_tiny_error_LED(text="") -> QPushButton:
-    button = QPushButton(text=text, checkable=True, enabled=False)
-    button.setStyleSheet(SS_TINY_ERROR_LED)
-    return button
-
-
-def create_tiny_LED(text="") -> QPushButton:
-    button = QPushButton(text=text, checkable=True, enabled=False)
-    button.setStyleSheet(SS_TINY_LED)
-    return button
-
-
-def create_error_LED(text="") -> QPushButton:
-    button = QPushButton(text=text, checkable=True, enabled=False)
-    button.setStyleSheet(SS_ERROR_LED)
-    return button

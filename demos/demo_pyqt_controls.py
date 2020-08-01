@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import sys
+from typing import List
 
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets as QtWid
 import pyqtgraph as pg
 
-import dvg_pyqt_controls as controls
+import dvg_pyqt_controls as c
 
 
 # ------------------------------------------------------------------------------
@@ -22,85 +23,159 @@ class MainWindow(QtWid.QWidget):
         self.setGeometry(350, 50, 800, 660)
         self.setWindowTitle("Demo: dvg_pyqt_controls")
 
-        def grid_add(
-            grid: QtWid.QGridLayout, label: str, control: QtWid.QWidget
-        ):
-            row_idx = grid.rowCount()
-            grid.addWidget(QtWid.QLabel(label), row_idx, 0)
-            grid.addWidget(control, row_idx, 1)
-
-        def grid_add_double(
+        def add2grid(
             grid: QtWid.QGridLayout,
-            label: str,
-            control_1: QtWid.QWidget,
-            control_2: QtWid.QWidget,
+            labels: List[QtWid.QWidget],
+            controls: List[QtWid.QWidget],
         ):
-            row_idx = grid.rowCount()
-            grid.addWidget(QtWid.QLabel(label), row_idx, 0)
-            grid.addWidget(control_1, row_idx, 1)
-            grid.addWidget(control_2, row_idx, 2)
+            for idx, control in enumerate(controls):
+                row_idx = grid.rowCount()
+                grid.addWidget(labels[idx], row_idx, 0)
+                grid.addWidget(control, row_idx, 1)
 
-        grid = QtWid.QGridLayout()
-        grid.addWidget(QtWid.QLabel("LED's"), 0, 0)
-        grid.setRowMinimumHeight(grid.rowCount(), 20)
+        def add2box(hbox, N, create_control_fun):
+            controls = list()
+            labels = list()
+            for i in range(N):
+                controls.append(create_control_fun())
+                labels.append(QtWid.QLabel("%d" % i))
 
-        led_1a = controls.create_LED_indicator()
-        led_1b = controls.create_LED_indicator()
-        led_2a = controls.create_LED_indicator_rect()
-        led_2b = controls.create_LED_indicator_rect()
-        led_3a = controls.create_tiny_error_LED()
-        led_3b = controls.create_tiny_error_LED()
-        led_4a = controls.create_tiny_LED()
-        led_4b = controls.create_tiny_LED()
-        led_5a = controls.create_error_LED()
-        led_5b = controls.create_error_LED()
+            grid = QtWid.QGridLayout()
+            add2grid(grid, labels, controls)
+            grid.setAlignment(QtCore.Qt.AlignTop)
 
-        grid_add_double(grid, "LED indicator", led_1a, led_1b)
-        grid_add_double(grid, "LED indicator rect", led_2a, led_2b)
-        grid_add_double(grid, "Tiny error LED", led_3a, led_3b)
-        grid_add_double(grid, "Tiny LED", led_4a, led_4b)
-        grid_add_double(grid, "Error LED", led_5a, led_5b)
+            descr = create_control_fun.__name__
+            descr = descr.replace("create_", "")
+            descr = descr.replace("_", " ")
+            grpb = QtWid.QGroupBox(descr)
+            grpb.setStyleSheet(c.SS_GROUP)
+            grpb.setLayout(grid)
 
-        grid.setRowMinimumHeight(grid.rowCount(), 20)
-        grid.addWidget(QtWid.QLabel("Buttons"), grid.rowCount(), 0)
-        grid.setRowMinimumHeight(grid.rowCount(), 20)
+            hbox.addWidget(grpb, stretch=0, alignment=QtCore.Qt.AlignTop)
+            return (controls, labels)
 
-        btn_1 = controls.create_Relay_button()
-        btn_2 = controls.create_Toggle_button()
-        btn_3 = controls.create_Toggle_button_2()
-        btn_4 = controls.create_Toggle_button_3()
+        # ----------------------------------------------------------------------
+        #   LEDs
+        # ----------------------------------------------------------------------
 
-        grid_add(grid, "Relay button", btn_1)
-        grid_add(grid, "Toggle button", btn_2)
-        grid_add(grid, "Toggle button 2", btn_3)
-        grid_add(grid, "Toggle button 3", btn_4)
+        hbox_1 = QtWid.QHBoxLayout()
+        leds_1, lbls_1 = add2box(hbox_1, 8, c.create_LED_indicator)
+        leds_2, lbls_2 = add2box(hbox_1, 4, c.create_LED_indicator_rect)
+        leds_3, lbls_3 = add2box(hbox_1, 4, c.create_error_LED)
+        leds_4, lbls_4 = add2box(hbox_1, 4, c.create_tiny_LED)
+        leds_5, lbls_5 = add2box(hbox_1, 4, c.create_tiny_error_LED)
 
-        # 'LegendBox'
-        PEN_1 = pg.mkPen(color=[255, 30, 180], width=3)
-        PEN_2 = pg.mkPen(color=[0, 255, 255], width=3)
-        PEN_3 = pg.mkPen(color=[255, 255, 90], width=3)
+        uber_leds = [leds_1, leds_2, leds_3, leds_4, leds_5]
+        uber_lbls = [lbls_1, lbls_2, lbls_3, lbls_4, lbls_5]
 
-        self.legend_box = controls.LegendBox(
-            text=["wave 1", "wave 2", "Lissajous"],
-            pen=[PEN_1, PEN_2, PEN_3],
-            checked=[True, True, True],
+        for i, leds in enumerate(uber_leds):
+            for j, led in enumerate(leds):
+                if j < 2:
+                    checked = False
+                    enabled = False
+                    control_text = "0" if i < 3 else ""
+                    label_text = "Disabled & False"
+                elif j < 4:
+                    checked = True
+                    enabled = False
+                    control_text = "1" if i < 3 else ""
+                    label_text = "Disabled & True"
+                elif j < 6:
+                    checked = False
+                    enabled = True
+                    control_text = "0" if i < 3 else ""
+                    label_text = "Enabled & False"
+                else:
+                    checked = True
+                    enabled = True
+                    control_text = "1" if i < 3 else ""
+                    label_text = "Enabled & True"
+
+                led.setChecked(checked)
+                led.setEnabled(enabled)
+                led.setText(control_text)
+                uber_lbls[i][j].setText(label_text)
+
+        # ----------------------------------------------------------------------
+        #   Buttons
+        # ----------------------------------------------------------------------
+
+        hbox_2 = QtWid.QHBoxLayout()
+        btns_1, lbls_1 = add2box(hbox_2, 8, c.create_Relay_button)
+        btns_2, lbls_2 = add2box(hbox_2, 8, c.create_Toggle_button)
+        btns_3, lbls_3 = add2box(hbox_2, 8, c.create_Toggle_button_2)
+        btns_4, lbls_4 = add2box(hbox_2, 8, c.create_Toggle_button_3)
+
+        uber_btns = [btns_1, btns_2, btns_3, btns_4]
+        uber_lbls = [lbls_1, lbls_2, lbls_3, lbls_4]
+
+        for i, btns in enumerate(uber_btns):
+            for j, btn in enumerate(btns):
+                if j < 2:
+                    checked = False
+                    enabled = False
+                    label_text = "Disabled & False"
+                elif j < 4:
+                    checked = True
+                    enabled = False
+                    label_text = "Disabled & True"
+                elif j < 6:
+                    checked = False
+                    enabled = True
+                    label_text = "Enabled & False"
+                else:
+                    checked = True
+                    enabled = True
+                    label_text = "Enabled & True"
+
+                btn.setChecked(checked)
+                btn.setEnabled(enabled)
+                btn.setText(control_text)
+                uber_lbls[i][j].setText(label_text)
+
+        for btn in btns_1:
+            btn.setText("0" if not btn.isChecked() else "1")
+        for btn in btns_2:
+            btn.setText("False" if not btn.isChecked() else "True")
+        for btn in btns_3:
+            btn.setText("Off Okay" if not btn.isChecked() else "ON !!")
+        for btn in btns_4:
+            btn.setText("OFF !!" if not btn.isChecked() else "On Okay")
+
+        # ----------------------------------------------------------------------
+        #   LegendBox
+        # ----------------------------------------------------------------------
+
+        legend_box = c.LegendBox(
+            texts=["wave 1", "wave 2", "unchecked"],
+            pens=[
+                pg.mkPen(color=[255, 30, 180], width=3),
+                pg.mkPen(color=[0, 255, 255], width=3),
+                pg.mkPen(color=[255, 255, 90], width=3),
+            ],
+            checks=[True, True, False],
         )
 
-        vbox = QtWid.QVBoxLayout()
-        vbox.addLayout(grid)
-        vbox.addStretch()
+        grpb = QtWid.QGroupBox("LegendBox")
+        grpb.setStyleSheet(c.SS_GROUP)
+        grpb.setLayout(legend_box.grid)
 
-        # Round up frame
-        hbox = QtWid.QHBoxLayout()
-        hbox.addLayout(vbox, 0)
-        hbox.addStretch()
+        hbox_3 = QtWid.QHBoxLayout()
+        hbox_3.addWidget(grpb, stretch=0)
 
         # -------------------------
         #   Round up full window
         # -------------------------
 
+        hbox_1.addStretch()
+        hbox_2.addStretch()
+        hbox_3.addStretch()
+
         vbox = QtWid.QVBoxLayout(self)
-        vbox.addLayout(hbox, stretch=1)
+        vbox.addLayout(hbox_1, stretch=0)
+        vbox.addLayout(hbox_2, stretch=0)
+        vbox.addLayout(hbox_3, stretch=0)
+        vbox.addStretch()
 
 
 # ------------------------------------------------------------------------------
