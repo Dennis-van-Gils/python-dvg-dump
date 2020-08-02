@@ -20,13 +20,13 @@ TODO:
         # First: if any curve is hidden --> show all
         # Second: if all curves are shown --> hide all
 
-        any_hidden = False
+        any_unchecked = False
         for i_ in range(N_channels):
             if not self.chkbs_show_curves[i_].isChecked():
                 self.chkbs_show_curves[i_].setChecked(True)
-                any_hidden = True
+                any_unchecked = True
 
-        if not any_hidden:
+        if not any_unchecked:
             for i_ in range(N_channels):
                 self.chkbs_show_curves[i_].setChecked(False)
 
@@ -40,10 +40,7 @@ __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pyqt-controls"
 __date__ = "31-07-2020"
 __version__ = "1.0.0"
 
-from typing import List
-
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QPushButton
 
 COLOR_RED = "rgb(255, 0, 0)"
 COLOR_YELLOW = "rgb(255, 255, 0)"
@@ -243,88 +240,6 @@ SS_TITLE = (
 )
 
 # fmt: on
-# -----------------------------------------------------------------------------
-#   LegendBox
-# -----------------------------------------------------------------------------
-
-
-class LegendBox(QWidget):
-    def __init__(
-        self,
-        texts: List[str],
-        pens: List[QtGui.QPen],
-        checks: List[bool] = True,
-        bg_color=QtGui.QColor(36, 36, 36),
-        box_width=40,
-        box_height=23,
-        parent=None,
-    ):
-        super().__init__(parent=parent)
-
-        if not isinstance(texts, list):
-            texts = [texts]
-        if not isinstance(pens, list):
-            pens = [pens]
-        if not isinstance(checks, list):
-            checks = [checks]
-
-        self.chkbs = []
-        self.painted_lines = []
-        self.grid = QGridLayout(spacing=1)
-
-        for idx, text in enumerate(texts):
-            try:
-                _checked = checks[idx]
-            except:  # pylint: disable=bare-except
-                _checked = True
-
-            chkb = QCheckBox(
-                text=text,
-                layoutDirection=QtCore.Qt.LeftToRight,
-                checked=_checked,
-            )
-            self.chkbs.append(chkb)
-
-            PaintedLine = self.PaintedLine(
-                pen=pens[idx],
-                bg_color=bg_color,
-                box_width=box_width,
-                box_height=box_height,
-            )
-            self.painted_lines.append(PaintedLine)
-
-            p = {"alignment": QtCore.Qt.AlignLeft}
-            self.grid.addWidget(chkb, idx, 0, **p)
-            self.grid.addWidget(PaintedLine, idx, 1)
-            self.grid.setColumnStretch(0, 0)
-            self.grid.setColumnStretch(1, 0)  # Was (1, 1) before PyPi
-            self.grid.setAlignment(QtCore.Qt.AlignTop)
-
-    class PaintedLine(QWidget):
-        def __init__(self, pen, bg_color, box_width, box_height, parent=None):
-            super().__init__(parent=parent)
-
-            self.pen = pen
-            self.bg_color = bg_color
-            self.box_width = box_width
-            self.box_height = box_height
-
-            self.setFixedWidth(box_width)
-            self.setFixedHeight(box_height)
-
-        def paintEvent(self, _event):
-            w = self.width()
-            h = self.height()
-            x = 8
-            y = 6
-
-            painter = QtGui.QPainter()
-            painter.begin(self)
-            painter.fillRect(0, 0, w, h, self.bg_color)
-            painter.setPen(self.pen)
-            painter.drawLine(QtCore.QLine(x, h - y, w - x, y))
-            painter.end()
-
 
 # -----------------------------------------------------------------------------
 #   Create controls

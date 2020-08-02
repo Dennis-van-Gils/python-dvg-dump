@@ -6,7 +6,6 @@ from typing import List
 
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets as QtWid
-import pyqtgraph as pg
 
 import dvg_pyqt_controls as c
 
@@ -142,39 +141,16 @@ class MainWindow(QtWid.QWidget):
         for btn in btns_4:
             btn.setText("OFF !!" if not btn.isChecked() else "On Okay")
 
-        # ----------------------------------------------------------------------
-        #   LegendBox
-        # ----------------------------------------------------------------------
-
-        legend_box = c.LegendBox(
-            texts=["wave 1", "wave 2", "unchecked"],
-            pens=[
-                pg.mkPen(color=[255, 30, 180], width=3),
-                pg.mkPen(color=[0, 255, 255], width=3),
-                pg.mkPen(color=[255, 255, 90], width=3),
-            ],
-            checks=[True, True, False],
-        )
-
-        grpb = QtWid.QGroupBox("LegendBox")
-        grpb.setStyleSheet(c.SS_GROUP)
-        grpb.setLayout(legend_box.grid)
-
-        hbox_3 = QtWid.QHBoxLayout()
-        hbox_3.addWidget(grpb, stretch=0)
-
         # -------------------------
         #   Round up full window
         # -------------------------
 
         hbox_1.addStretch()
         hbox_2.addStretch()
-        hbox_3.addStretch()
 
         vbox = QtWid.QVBoxLayout(self)
         vbox.addLayout(hbox_1, stretch=0)
         vbox.addLayout(hbox_2, stretch=0)
-        vbox.addLayout(hbox_3, stretch=0)
         vbox.addStretch()
 
 
