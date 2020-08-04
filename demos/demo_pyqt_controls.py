@@ -178,10 +178,11 @@ class MainWindow(QtWid.QWidget):
         qpte_1 = QtWid.QPlainTextEdit("Normal")
         qpte_2 = QtWid.QPlainTextEdit("Read-only --> ERROR")
         qlin_2.setReadOnly(True)
+        # qlin_2.setEnabled(False)
         qpte_2.setReadOnly(True)
+        # qpte_2.setEnabled(False)
         for control in [qlin_1, qlin_2, qpte_1, qpte_2]:
             control.setStyleSheet(c.SS_TEXTBOX_ERRORS)
-            # control.setEnabled(False)
 
         grid = QtWid.QGridLayout()
         grid.setAlignment(QtCore.Qt.AlignTop)
@@ -197,12 +198,12 @@ class MainWindow(QtWid.QWidget):
         hbox_3.addWidget(grpb)
 
         # SS_TITLE
-
         qlbl = QtWid.QLabel(
-            "Title using SS_TITLE", font=QtGui.QFont("Verdana", 12)
+            "QLabel using SS_TITLE", font=QtGui.QFont("Verdana", 12)
         )
         qlbl.setStyleSheet(c.SS_TITLE)
 
+        # PyQt5 defaults
         grid = QtWid.QGridLayout()
         grid.setAlignment(QtCore.Qt.AlignTop)
         grid.addWidget(QtWid.QPushButton("Default QPushButton"), 0, 0)
