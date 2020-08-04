@@ -4,7 +4,7 @@
 import sys
 from typing import List
 
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets as QtWid
 
 import dvg_pyqt_controls as c
@@ -32,16 +32,48 @@ class MainWindow(QtWid.QWidget):
                 grid.addWidget(labels[idx], row_idx, 0)
                 grid.addWidget(control, row_idx, 1)
 
-        def add2box(hbox, N, create_control_fun):
+        def add2box(
+            hbox,
+            create_control_fun,
+            N: int = 8,
+            unchecked_text: str = "Off",
+            checked_text: str = "On",
+            **kwargs
+        ):
             controls = list()
             labels = list()
             for i in range(N):
-                controls.append(create_control_fun())
-                labels.append(QtWid.QLabel("%d" % i))
+                if i < 2:
+                    checked = False
+                    enabled = False
+                elif i < 4:
+                    checked = True
+                    enabled = False
+                elif i < 6:
+                    checked = False
+                    enabled = True
+                else:
+                    checked = True
+                    enabled = True
+
+                control_text = checked_text if checked else unchecked_text
+                label_text = "Enabled & " if enabled else "Disabled & "
+                label_text += "True" if checked else "False"
+
+                controls.append(
+                    create_control_fun(
+                        checked=checked, text=control_text, **kwargs
+                    )
+                )
+                controls[-1].setEnabled(enabled)
+                labels.append(QtWid.QLabel(text=label_text))
 
             grid = QtWid.QGridLayout()
             add2grid(grid, labels, controls)
             grid.setAlignment(QtCore.Qt.AlignTop)
+
+            # if create_control_fun.__name__ == "create_Relay_button":
+            #    grid.setVerticalSpacing(0)
 
             descr = create_control_fun.__name__
             descr = descr.replace("create_", "")
@@ -50,7 +82,7 @@ class MainWindow(QtWid.QWidget):
             grpb.setStyleSheet(c.SS_GROUP)
             grpb.setLayout(grid)
 
-            hbox.addWidget(grpb, stretch=0, alignment=QtCore.Qt.AlignTop)
+            hbox.addWidget(grpb)  # , stretch=0, alignment=QtCore.Qt.AlignTop)
             return (controls, labels)
 
         # ----------------------------------------------------------------------
@@ -58,88 +90,102 @@ class MainWindow(QtWid.QWidget):
         # ----------------------------------------------------------------------
 
         hbox_1 = QtWid.QHBoxLayout()
-        leds_1, lbls_1 = add2box(hbox_1, 8, c.create_LED_indicator)
-        leds_2, lbls_2 = add2box(hbox_1, 4, c.create_LED_indicator_rect)
-        leds_3, lbls_3 = add2box(hbox_1, 4, c.create_error_LED)
-        leds_4, lbls_4 = add2box(hbox_1, 4, c.create_tiny_LED)
-        leds_5, lbls_5 = add2box(hbox_1, 4, c.create_tiny_error_LED)
-
-        uber_leds = [leds_1, leds_2, leds_3, leds_4, leds_5]
-        uber_lbls = [lbls_1, lbls_2, lbls_3, lbls_4, lbls_5]
-
-        for i, leds in enumerate(uber_leds):
-            for j, led in enumerate(leds):
-                if j < 2:
-                    checked = False
-                    enabled = False
-                    control_text = "0" if i < 3 else ""
-                    label_text = "Disabled & False"
-                elif j < 4:
-                    checked = True
-                    enabled = False
-                    control_text = "1" if i < 3 else ""
-                    label_text = "Disabled & True"
-                elif j < 6:
-                    checked = False
-                    enabled = True
-                    control_text = "0" if i < 3 else ""
-                    label_text = "Enabled & False"
-                else:
-                    checked = True
-                    enabled = True
-                    control_text = "1" if i < 3 else ""
-                    label_text = "Enabled & True"
-
-                led.setChecked(checked)
-                led.setEnabled(enabled)
-                led.setText(control_text)
-                uber_lbls[i][j].setText(label_text)
+        add2box(hbox_1, c.create_LED_indicator, 4, "0", "1")
+        add2box(hbox_1, c.create_LED_indicator_rect, 4)
+        add2box(hbox_1, c.create_error_LED, 4, "0", "1")
+        add2box(hbox_1, c.create_tiny_LED, 4, "", "")
+        add2box(hbox_1, c.create_tiny_error_LED, 4, "", "")
 
         # ----------------------------------------------------------------------
         #   Buttons
         # ----------------------------------------------------------------------
 
         hbox_2 = QtWid.QHBoxLayout()
-        btns_1, lbls_1 = add2box(hbox_2, 8, c.create_Relay_button)
-        btns_2, lbls_2 = add2box(hbox_2, 8, c.create_Toggle_button)
-        btns_3, lbls_3 = add2box(hbox_2, 8, c.create_Toggle_button_2)
-        btns_4, lbls_4 = add2box(hbox_2, 8, c.create_Toggle_button_3)
+        add2box(hbox_2, c.create_Relay_button, 8, "0", "1")
+        add2box(
+            hbox_2, c.create_Toggle_button, 8, "False", "True", minimumWidth=80
+        )
+        add2box(
+            hbox_2,
+            c.create_Toggle_button_2,
+            8,
+            "Off Okay",
+            "ON !!",
+            minimumWidth=80,
+        )
+        add2box(
+            hbox_2,
+            c.create_Toggle_button_3,
+            8,
+            "OFF !!",
+            "On Okay",
+            minimumWidth=80,
+        )
 
-        uber_btns = [btns_1, btns_2, btns_3, btns_4]
-        uber_lbls = [lbls_1, lbls_2, lbls_3, lbls_4]
+        # ----------------------------------------------------------------------
+        #   Other style sheets
+        # ----------------------------------------------------------------------
 
-        for i, btns in enumerate(uber_btns):
-            for j, btn in enumerate(btns):
-                if j < 2:
-                    checked = False
-                    enabled = False
-                    label_text = "Disabled & False"
-                elif j < 4:
-                    checked = True
-                    enabled = False
-                    label_text = "Disabled & True"
-                elif j < 6:
-                    checked = False
-                    enabled = True
-                    label_text = "Enabled & False"
-                else:
-                    checked = True
-                    enabled = True
-                    label_text = "Enabled & True"
+        hbox_3 = QtWid.QHBoxLayout()
 
-                btn.setChecked(checked)
-                btn.setEnabled(enabled)
-                btn.setText(control_text)
-                uber_lbls[i][j].setText(label_text)
+        # SS_TEXTBOX_READ_ONLY
+        qlin_1 = QtWid.QLineEdit("Dummy text: enabled")
+        qlin_2 = QtWid.QLineEdit("Dummy text: read-only")
+        qpte_1 = QtWid.QPlainTextEdit("Dummy text: enabled")
+        qpte_2 = QtWid.QPlainTextEdit("Dummy text: read-only")
+        qlin_2.setReadOnly(True)
+        qpte_2.setReadOnly(True)
+        for control in [qlin_1, qlin_2, qpte_1, qpte_2]:
+            control.setStyleSheet(c.SS_TEXTBOX_READ_ONLY)
 
-        for btn in btns_1:
-            btn.setText("0" if not btn.isChecked() else "1")
-        for btn in btns_2:
-            btn.setText("False" if not btn.isChecked() else "True")
-        for btn in btns_3:
-            btn.setText("Off Okay" if not btn.isChecked() else "ON !!")
-        for btn in btns_4:
-            btn.setText("OFF !!" if not btn.isChecked() else "On Okay")
+        grid = QtWid.QGridLayout()
+        grid.setAlignment(QtCore.Qt.AlignTop)
+        grid.addWidget(qlin_1, 0, 0)
+        grid.addWidget(qlin_2, 1, 0)
+        grid.addWidget(qpte_1, 2, 0)
+        grid.addWidget(qpte_2, 3, 0)
+
+        grpb = QtWid.QGroupBox("SS_TEXTBOX_READ_ONLY")
+        grpb.setStyleSheet(c.SS_GROUP)
+        grpb.setLayout(grid)
+
+        hbox_3.addWidget(grpb)
+
+        # SS_TEXTBOX_ERRORS
+        qlin_1 = QtWid.QLineEdit("Dummy text: enabled")
+        qlin_2 = QtWid.QLineEdit("Dummy text: read-only")
+        qpte_1 = QtWid.QPlainTextEdit("Dummy text: enabled")
+        qpte_2 = QtWid.QPlainTextEdit("Dummy text: read-only")
+        qlin_2.setReadOnly(True)
+        qpte_2.setReadOnly(True)
+        for control in [qlin_1, qlin_2, qpte_1, qpte_2]:
+            control.setStyleSheet(c.SS_TEXTBOX_ERRORS)
+            # control.setEnabled(False)
+
+        grid = QtWid.QGridLayout()
+        grid.setAlignment(QtCore.Qt.AlignTop)
+        grid.addWidget(qlin_1, 0, 0)
+        grid.addWidget(qlin_2, 1, 0)
+        grid.addWidget(qpte_1, 2, 0)
+        grid.addWidget(qpte_2, 3, 0)
+
+        grpb = QtWid.QGroupBox("SS_TEXTBOX_ERRORS")
+        grpb.setStyleSheet(c.SS_GROUP)
+        grpb.setLayout(grid)
+
+        hbox_3.addWidget(grpb)
+
+        # SS_TITLE
+        qlbl = QtWid.QLabel(
+            "Title using SS_TITLE", font=QtGui.QFont("Verdana", 12)
+        )
+        qlbl.setStyleSheet(c.SS_TITLE)
+
+        grid = QtWid.QGridLayout()
+        grid.setAlignment(QtCore.Qt.AlignTop)
+        grid.addWidget(qlbl, 0, 0)
+
+        hbox_3.addWidget(qlbl, stretch=0, alignment=QtCore.Qt.AlignTop)
 
         # -------------------------
         #   Round up full window
@@ -147,10 +193,12 @@ class MainWindow(QtWid.QWidget):
 
         hbox_1.addStretch()
         hbox_2.addStretch()
+        hbox_3.addStretch()
 
         vbox = QtWid.QVBoxLayout(self)
         vbox.addLayout(hbox_1, stretch=0)
         vbox.addLayout(hbox_2, stretch=0)
+        vbox.addLayout(hbox_3, stretch=0)
         vbox.addStretch()
 
 
