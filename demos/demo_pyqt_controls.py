@@ -60,20 +60,41 @@ class MainWindow(QtWid.QWidget):
                 label_text = "Enabled & " if enabled else "Disabled & "
                 label_text += "True" if checked else "False"
 
-                controls.append(
-                    create_control_fun(
-                        checked=checked, text=control_text, **kwargs
+                control = create_control_fun(
+                    checked=checked, text=control_text, **kwargs
+                )
+                control.setEnabled(enabled)
+                controls.append(control)
+                labels.append(QtWid.QLabel(text=label_text))
+
+            if N == 8:
+                controls[4].clicked.connect(
+                    lambda state: controls[4].setText(
+                        checked_text if state else unchecked_text
                     )
                 )
-                controls[-1].setEnabled(enabled)
-                labels.append(QtWid.QLabel(text=label_text))
+                controls[5].clicked.connect(
+                    lambda state: controls[5].setText(
+                        checked_text if state else unchecked_text
+                    )
+                )
+                controls[6].clicked.connect(
+                    lambda state: controls[6].setText(
+                        checked_text if state else unchecked_text
+                    )
+                )
+                controls[7].clicked.connect(
+                    lambda state: controls[7].setText(
+                        checked_text if state else unchecked_text
+                    )
+                )
 
             grid = QtWid.QGridLayout()
             add2grid(grid, labels, controls)
             grid.setAlignment(QtCore.Qt.AlignTop)
 
-            # if create_control_fun.__name__ == "create_Relay_button":
-            #    grid.setVerticalSpacing(0)
+            if create_control_fun.__name__ == "create_Relay_button":
+                grid.setVerticalSpacing(0)
 
             descr = create_control_fun.__name__
             descr = descr.replace("create_", "")
@@ -110,14 +131,14 @@ class MainWindow(QtWid.QWidget):
             c.create_Toggle_button_2,
             8,
             "Off Okay",
-            "ON !!",
+            "!! ON !!",
             minimumWidth=80,
         )
         add2box(
             hbox_2,
             c.create_Toggle_button_3,
             8,
-            "OFF !!",
+            "!! OFF !!",
             "On Okay",
             minimumWidth=80,
         )
@@ -129,10 +150,10 @@ class MainWindow(QtWid.QWidget):
         hbox_3 = QtWid.QHBoxLayout()
 
         # SS_TEXTBOX_READ_ONLY
-        qlin_1 = QtWid.QLineEdit("Dummy text: enabled")
-        qlin_2 = QtWid.QLineEdit("Dummy text: read-only")
-        qpte_1 = QtWid.QPlainTextEdit("Dummy text: enabled")
-        qpte_2 = QtWid.QPlainTextEdit("Dummy text: read-only")
+        qlin_1 = QtWid.QLineEdit("Normal")
+        qlin_2 = QtWid.QLineEdit("Read-only")
+        qpte_1 = QtWid.QPlainTextEdit("Normal")
+        qpte_2 = QtWid.QPlainTextEdit("Read-only")
         qlin_2.setReadOnly(True)
         qpte_2.setReadOnly(True)
         for control in [qlin_1, qlin_2, qpte_1, qpte_2]:
@@ -152,10 +173,10 @@ class MainWindow(QtWid.QWidget):
         hbox_3.addWidget(grpb)
 
         # SS_TEXTBOX_ERRORS
-        qlin_1 = QtWid.QLineEdit("Dummy text: enabled")
-        qlin_2 = QtWid.QLineEdit("Dummy text: read-only")
-        qpte_1 = QtWid.QPlainTextEdit("Dummy text: enabled")
-        qpte_2 = QtWid.QPlainTextEdit("Dummy text: read-only")
+        qlin_1 = QtWid.QLineEdit("Normal")
+        qlin_2 = QtWid.QLineEdit("Read-only --> ERROR")
+        qpte_1 = QtWid.QPlainTextEdit("Normal")
+        qpte_2 = QtWid.QPlainTextEdit("Read-only --> ERROR")
         qlin_2.setReadOnly(True)
         qpte_2.setReadOnly(True)
         for control in [qlin_1, qlin_2, qpte_1, qpte_2]:
@@ -176,6 +197,7 @@ class MainWindow(QtWid.QWidget):
         hbox_3.addWidget(grpb)
 
         # SS_TITLE
+
         qlbl = QtWid.QLabel(
             "Title using SS_TITLE", font=QtGui.QFont("Verdana", 12)
         )
@@ -183,9 +205,19 @@ class MainWindow(QtWid.QWidget):
 
         grid = QtWid.QGridLayout()
         grid.setAlignment(QtCore.Qt.AlignTop)
-        grid.addWidget(qlbl, 0, 0)
+        grid.addWidget(QtWid.QPushButton("Default QPushButton"), 0, 0)
+        grid.addWidget(QtWid.QLineEdit("Default QLineEdit"), 1, 0)
+        grid.addWidget(QtWid.QTextEdit("Default QTextEdit"), 2, 0)
 
-        hbox_3.addWidget(qlbl, stretch=0, alignment=QtCore.Qt.AlignTop)
+        grpb = QtWid.QGroupBox("PyQt5 defaults")
+        grpb.setStyleSheet(c.SS_GROUP)
+        grpb.setLayout(grid)
+
+        vbox_sub = QtWid.QVBoxLayout()
+        vbox_sub.addWidget(qlbl)
+        vbox_sub.addWidget(grpb)
+
+        hbox_3.addLayout(vbox_sub)
 
         # -------------------------
         #   Round up full window
@@ -209,6 +241,5 @@ class MainWindow(QtWid.QWidget):
 if __name__ == "__main__":
     app = QtWid.QApplication(sys.argv)
     window = MainWindow()
-
     window.show()
     sys.exit(app.exec_())

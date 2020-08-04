@@ -9,18 +9,15 @@ __url__ = "https://github.com/Dennis-van-Gils/python-dvg-pyqt-controls"
 __date__ = "04-08-2020"
 __version__ = "1.0.0"
 
+from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtGui import QCursor
 
 COLOR_INDIAN_RED_2 = "rgb(225, 102, 102)"
 COLOR_SPRING_GREEN_2 = "rgb(0, 238, 118)"
 COLOR_BISQUE_5 = "rgb(252, 218, 183)"
-COLOR_READ_ONLY = "rgb(250, 230, 210)"
-
-# Get the standard background color for a QButton from
-# QtGui.QApplication.palette().button().color().name()
-# However, at init there is no QApplication instance yet and Python crashes
-# hence hard-code here.
-COLOR_BTN_BG = "rgb(240, 240, 240)"
+COLOR_READ_ONLY = "rgb(250, 235, 225)"
+COLOR_BUTTON_BG = "rgb(240, 240, 240)"
 
 # ------------------------------------------------------------------------------
 #   Style sheets
@@ -30,24 +27,28 @@ COLOR_BTN_BG = "rgb(240, 240, 240)"
 SS_TEXTBOX_READ_ONLY = (
     "QLineEdit {"
         "padding: 0 2px;"
-        "border: 1px solid black}"
+        "border: 1px solid gray}"
 
     "QLineEdit:read-only {"
-        "border: 1px solid dimgray;"
         "background: " + COLOR_READ_ONLY + "}"
 
+    "QLineEdit::hover {"
+        "border-color: black;}"
+
     "QPlainTextEdit {"
-        "border: 1px solid black}"
+        "border: 1px solid gray}"
 
     'QPlainTextEdit[readOnly="true"] {'
-        "border: 1px solid dimgray;"
         "background-color: " + COLOR_READ_ONLY + "}"
+
+    "QPlainTextEdit::hover {"
+        "border-color: black;}"
 )
 
 SS_TEXTBOX_ERRORS = (
     "QLineEdit {"
         "padding: 0 2px;"
-        "border: 1px solid dimgray;"
+        "border: 1px solid gray;"
         "background: " + COLOR_READ_ONLY + "}"
 
     "QLineEdit::read-only {"
@@ -55,14 +56,26 @@ SS_TEXTBOX_ERRORS = (
         "background: yellow;"
         "color: black}"
 
+    "QLineEdit::hover {"
+            "border-color: black;}"
+
+    "QLineEdit:read-only::hover {"
+        "border-color: red;}"
+
     "QPlainTextEdit {"
-        "border: 1px solid dimgray;"
+        "border: 1px solid gray;"
         "background-color: " + COLOR_READ_ONLY + "}"
 
     'QPlainTextEdit[readOnly="true"] {'
         "border: 2px solid red;"
         "background-color: yellow;"
         "color: black}"
+
+    "QPlainTextEdit::hover {"
+        "border-color: black;}"
+
+    'QPlainTextEdit[readOnly="true"]::hover {'
+        "border-color: red;}"
 )
 
 SS_GROUP = (
@@ -182,7 +195,7 @@ def create_tiny_LED(**kwargs) -> QPushButton:
     # fmt: off
     SS = (
         "QPushButton {"
-            "background-color: " + COLOR_BTN_BG + ";"
+            "background-color: " + COLOR_BUTTON_BG + ";"
             "color: black;"
             "border: 1px solid black;"
             "border-radius: 5px;"
@@ -208,7 +221,7 @@ def create_tiny_error_LED(**kwargs) -> QPushButton:
     # fmt: off
     SS = (
         "QPushButton {"
-            "background-color: " + COLOR_BTN_BG + ";"
+            "background-color: " + COLOR_BUTTON_BG + ";"
             "color: black;"
             "border: 1px solid black;"
             "border-radius: 5px;"
@@ -231,10 +244,8 @@ def create_tiny_error_LED(**kwargs) -> QPushButton:
 # ------------------------------------------------------------------------------
 
 DFLT_TOGGLE_BTN_PADDING = "6px 6px 6px 6px"
-DFLT_TOGGLE_BTN_BORDER_STYLE = "outset"
-DFLT_TOGGLE_BTN_BORDER_STYLE_CHECKED = "inset"
 DFLT_TOGGLE_BTN_BORDER_WIDTH = "2px"
-DFLT_TOGGLE_BTN_BORDER_RADIUS = "4px"
+DFLT_TOGGLE_BTN_BORDER_RADIUS = "5px"
 
 
 def create_Relay_button(**kwargs) -> QPushButton:
@@ -261,10 +272,14 @@ def create_Relay_button(**kwargs) -> QPushButton:
         "QPushButton:checked {"
             "border-style: outset;"
             "background-color: " + COLOR_SPRING_GREEN_2 + ";}"
+
+        "QPushButton::hover {"
+            "border-color: black;}"
     )
     # fmt: on
     button = QPushButton(checkable=True, **kwargs)
     button.setStyleSheet(SS)
+    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
 
     # NOTE: Do not enable below code. There is a good reason to not change the
     # relay button label immediately at click. The text-value "0" or "1" can
@@ -287,25 +302,26 @@ def create_Toggle_button(**kwargs) -> QPushButton:
     # fmt: off
     SS = (
         "QPushButton {"
-            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE + ";"
+            "background-color: " + COLOR_BUTTON_BG + ";"
+            "border-style: outset;"
+            "border-color: gray dimgray dimgray gray;"
             "border-width: " + DFLT_TOGGLE_BTN_BORDER_WIDTH + ";"
             "border-radius: " + DFLT_TOGGLE_BTN_BORDER_RADIUS + ";"
-            "border-color: dimgray;"
-            "color: black;"
-            "background-color: " + COLOR_BTN_BG + ";}"
+            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
+            "color: black;}"
 
         "QPushButton:disabled {"
             "color: dimgray;}"
 
         "QPushButton:checked {"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE_CHECKED + ";"
-            "font-weight: normal;"
-            "background-color: " + COLOR_SPRING_GREEN_2 + ";}"
+            "background-color: " + COLOR_SPRING_GREEN_2 + ";"
+            "border-style: inset;"
+            "border-color: dimgray mediumspringgreen mediumspringgreen dimgray;}"
     )
     # fmt: on
     button = QPushButton(checkable=True, **kwargs)
     button.setStyleSheet(SS)
+    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
     return button
 
 
@@ -317,26 +333,27 @@ def create_Toggle_button_2(**kwargs) -> QPushButton:
     # fmt: off
     SS = (
         "QPushButton {"
-            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE + ";"
+            "background-color: " + COLOR_BUTTON_BG + ";"
+            "border-style: outset;"
+            "border-color: gray dimgray dimgray gray;"
             "border-width: " + DFLT_TOGGLE_BTN_BORDER_WIDTH + ";"
             "border-radius: " + DFLT_TOGGLE_BTN_BORDER_RADIUS + ";"
-            "border-color: dimgray;"
-            "color: black;"
-            "background-color: " + COLOR_BTN_BG + ";}"
+            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
+            "color: black;}"
 
         "QPushButton:disabled {"
             "color: dimgray;}"
 
         "QPushButton:checked {"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE_CHECKED + ";"
-            "border-color: red;"
-            "font-weight: bold;"
-            "background-color: yellow;}"
+            "background-color: yellow;"
+            "border-style: groove;"
+            "border-color: firebrick red red firebrick;"
+            "font-weight: bold;}"
     )
     # fmt: on
     button = QPushButton(checkable=True, **kwargs)
     button.setStyleSheet(SS)
+    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
     return button
 
 
@@ -348,25 +365,27 @@ def create_Toggle_button_3(**kwargs) -> QPushButton:
     # fmt: off
     SS = (
         "QPushButton {"
-            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE + ";"
+            "background-color: yellow;"
+            "border-style: ridge;"
+            "border-color: red firebrick firebrick red;"
             "border-width: " + DFLT_TOGGLE_BTN_BORDER_WIDTH + ";"
             "border-radius: " + DFLT_TOGGLE_BTN_BORDER_RADIUS + ";"
-            "border-color: red;"
+            "padding: " + DFLT_TOGGLE_BTN_PADDING + ";"
             "color: black;"
-            "font-weight: bold;"
-            "background-color: yellow;}"
+            "font-weight: bold;}"
 
         "QPushButton:disabled {"
             "color: dimgray;}"
 
         "QPushButton:checked {"
-            "border-style: " + DFLT_TOGGLE_BTN_BORDER_STYLE_CHECKED + ";"
-            "border-color: dimgray;"
-            "font-weight: normal;"
-            "background-color: " + COLOR_SPRING_GREEN_2 + ";}"
+            "background-color: " + COLOR_SPRING_GREEN_2 + ";"
+            "border-style: inset;"
+            "border-color: dimgray mediumspringgreen mediumspringgreen dimgray;"
+            "border-width: " + DFLT_TOGGLE_BTN_BORDER_WIDTH + ";"
+            "font-weight: normal;}"
     )
     # fmt: on
     button = QPushButton(checkable=True, **kwargs)
     button.setStyleSheet(SS)
+    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
     return button
