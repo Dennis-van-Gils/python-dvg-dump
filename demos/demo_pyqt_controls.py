@@ -21,6 +21,7 @@ class MainWindow(QtWid.QWidget):
 
         self.setGeometry(350, 50, 800, 660)
         self.setWindowTitle("Demo: dvg_pyqt_controls")
+        self.setStyleSheet(c.SS_GROUP)
 
         def add2grid(
             grid: QtWid.QGridLayout,
@@ -100,7 +101,6 @@ class MainWindow(QtWid.QWidget):
             descr = descr.replace("create_", "")
             descr = descr.replace("_", " ")
             grpb = QtWid.QGroupBox(descr)
-            grpb.setStyleSheet(c.SS_GROUP)
             grpb.setLayout(grid)
 
             hbox.addWidget(grpb)  # , stretch=0, alignment=QtCore.Qt.AlignTop)
@@ -167,7 +167,6 @@ class MainWindow(QtWid.QWidget):
         grid.addWidget(qpte_2, 3, 0)
 
         grpb = QtWid.QGroupBox("SS_TEXTBOX_READ_ONLY")
-        grpb.setStyleSheet(c.SS_GROUP)
         grpb.setLayout(grid)
 
         hbox_3.addWidget(grpb)
@@ -192,7 +191,6 @@ class MainWindow(QtWid.QWidget):
         grid.addWidget(qpte_2, 3, 0)
 
         grpb = QtWid.QGroupBox("SS_TEXTBOX_ERRORS")
-        grpb.setStyleSheet(c.SS_GROUP)
         grpb.setLayout(grid)
 
         hbox_3.addWidget(grpb)
@@ -211,7 +209,6 @@ class MainWindow(QtWid.QWidget):
         grid.addWidget(QtWid.QTextEdit("Default QTextEdit"), 2, 0)
 
         grpb = QtWid.QGroupBox("PyQt5 defaults using SS_GROUP")
-        grpb.setStyleSheet(c.SS_GROUP)
         grpb.setLayout(grid)
 
         vbox_sub = QtWid.QVBoxLayout()
