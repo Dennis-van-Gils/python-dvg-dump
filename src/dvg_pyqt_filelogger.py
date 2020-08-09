@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Class FileLogger handles logging data to file, particularly well suited for
-multithreaded programs, where one thread is writing data to the log (the logging
-thread) and the other thread (the main thread/GUI) requests
-starting and stopping of the logging by user interaction (i.e. a button).
+multithreaded programs, where one thread is writing data to the log and the
+other thread (the main thread/GUI) requests starting and stopping of the log
+by user interaction, e.g., a button press.
 
 The methods `start_recording()` and `stop_recording()` can be directly called
 from the main/GUI thread.
 
-In the data acquisitioni thread, place a call to `update()`
+In the data logging thread, place a call to `update()`.
+
+NOTE: No mutex implemented here!
+NOTE: Everything in this module will run in the Worker_DAQ thread! We need to
+signal any changes we want to the GUI.
+NOTE: Module will struggle on by design when exceptions occur. They are only
+reported to the command line and the module will continue on.
 
 Class:
     FileLogger():
@@ -39,11 +45,6 @@ __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/..."
 __date__ = "05-08-2020"
 __version__ = "1.0.0"
-# NOTE: No mutex implemented here! Notify the user.
-# NOTE: Everything in this module will run in the Worker_DAQ thread! We need to
-# signal any changes we want to the GUI.
-# NOTE: Module will struggle on by design when exceptions occur. They are only
-# reported to the command line and the module will continue on.
 
 from typing import AnyStr, Callable
 from pathlib import Path
