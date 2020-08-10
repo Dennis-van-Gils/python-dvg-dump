@@ -1,49 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Class FileLogger handles logging data to file, particularly well suited for
-multithreaded programs, where one thread is writing data to the log and the
-other thread (the main thread/GUI) requests starting and stopping of the log
-by user interaction, e.g., a button press.
+"""PyQt5 interface providing class ``FileLogger()`` to handle logging data to
+file particularly well suited for multithreaded programs.
 
-The methods `start_recording()` and `stop_recording()` can be directly called
-from the main/GUI thread.
+- Github: https://github.com/Dennis-van-Gils/python-dvg-pyqt_...
+- PyPI: https://pypi.org/project/dvg-pyqt_...
 
-In the data logging thread, place a call to `update()`.
+Installation::
 
-NOTE: No mutex implemented here!
-NOTE: Everything in this module will run in the Worker_DAQ thread! We need to
-signal any changes we want to the GUI.
-NOTE: Module will struggle on by design when exceptions occur. They are only
-reported to the command line and the module will continue on.
-
-Class:
-    FileLogger():
-        Methods:
-            start_recording():
-                Prime the start of recording.
-            stop_recording():
-                Prime the stop of recording.
-            update(...):
-                ...
-            write(...):
-                Write data to the open log file.
-            close():
-                Close the log file.
-
-        Signals:
-            signal_recording_started (str):
-                Useful for updating text of e.g. a record button when using a
-                PyQt GUI.
-
-            signal_recording_stopped (pathlib.Path):
-                Useful for updating text of e.g. a record button when using a
-                PyQt GUI. Or you could open a file explorer to the newly created
-                log file.
+    pip install dvg-pyqt-...
 """
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
-__url__ = "https://github.com/Dennis-van-Gils/..."
-__date__ = "05-08-2020"
+__url__ = "https://github.com/Dennis-van-Gils/dvg-pyqt_..."
+__date__ = "10-08-2020"
 __version__ = "1.0.0"
 
 from typing import AnyStr, Callable
@@ -57,25 +27,133 @@ from dvg_debug_functions import print_fancy_traceback as pft
 
 
 class FileLogger(QtCore.QObject):
+    """Handles logging data to a file on disk, particularly well suited for
+    multithreaded programs where one thread is writing data to the log and the
+    other thread (the main/GUI thread) requests starting and stopping of the
+    log, e.g., by the user pressing a button.
+
+    The methods ``start_recording()``, ``stop_recording()`` and ``record(bool)``
+    can be directly called from the main/GUI thread.
+
+    In the logging thread you repeatedly need to call ``update()``.
+
+    Args:
+        write_header_function (``Callable``, optional):
+            Reference to a function that contains the code to write a header to
+            the log file. This will get called during ``update()``.
+
+            Default: ``None``
+
+        write_data_function (``Callable``, optional):
+            Reference to a function that contains the code to write new data to
+            the log file. This will get called during ``update()``.
+
+            Default: ``None``
+
+    Both of the above functions can contain calls to the following class
+    members:
+        * ``FileLogger.write()``
+        * ``FileLogger.elapsed()``
+
+    NOTE:
+        This class lacks a mutex and is hence not threadsafe from the get-go.
+        As long as ``update()`` is being called from inside another mutex such
+        as a data-acquisition mutex, for instance, it is safe.
+
+    NOTE:
+        By design, this class will continue on when exceptions occur. They are
+        reported to the command line.
+
+    .. rubric:: Signals:
+
+    Signals:
+        signal_recording_started (``str``):
+            Emitted whenever a new recording has started. Useful for, e.g.,
+            updating text of a record button.
+
+            Returns:
+                The filepath as ``str`` of the newly created log file.
+
+            Type:
+                ``PyQt5.QtCore.pyqtSignal()``
+
+        signal_recording_stopped (``pathlib.Path``):
+            Emitted whenever the recording has stopped. Useful for, e.g.,
+            updating text of a record button.
+
+            Returns:
+                The filepath as ``pathlib.Path()`` of the newly created log
+                file. You could use this to, e.g., automatically navigate to
+                the log in the file explorer or ask the user for a 'save to'
+                destination.
+
+            Type:
+                ``PyQt5.QtCore.pyqtSignal()``
+
+    Example usage:
+
+    .. code-block:: python
+
+        from PyQt5 import QtWidgets as QtWid
+        from dvg_pyqt_filelogger import FileLogger
+
+        #  When using a PyQt5 GUI put this inside your ``MainWindow()`` definition:
+        # ----
+
+        self.qpbt_record = QtWid.QPushButton(
+            text="Click to start recording to file",
+            checkable=True
+        )
+        self.qpbt_record.clicked.connect(lambda state: log.record(state))
+
+        #  Initialize FileLogger at __main__
+        # ----
+
+        window = MainWindow()
+
+        log = FileLogger(
+            write_header_function=write_header_to_log,
+            write_data_function=write_data_to_log
+        )
+        log.signal_recording_started.connect(
+            lambda filepath: window.qpbt_record.setText(
+                "Recording to file: %s" % filepath
+            )
+        )
+        log.signal_recording_stopped.connect(
+            lambda: window.qpbt_record.setText(
+                "Click to start recording to file"
+            )
+        )
+
+        #  Define these functions in your main module:
+        # ----
+
+        def write_header_to_log():
+            log.write("elapsed [s]\treading_1\n")
+
+        def write_data_to_log():
+            log.write("%.3f\t%.4f\n" % (log.elapsed(), state.reading_1))
+
+        #  Lastly, put this inside your logging thread:
+        # ----
+
+        log.update()
+
+    """
+
     signal_recording_started = QtCore.pyqtSignal(str)
     signal_recording_stopped = QtCore.pyqtSignal(Path)
 
     def __init__(
         self,
-        write_header_fun: Callable = None,
-        write_data_fun: Callable = None,
+        write_header_function: Callable = None,
+        write_data_function: Callable = None,
     ):
-        """
-        Instruct user that he should use:
-            * self.write()`
-
-        Optionally:
-            * self.elapsed() # For PC timestamp, taken from time.perf_counter()
-        """
         super().__init__(parent=None)
 
-        self._write_header_fun = write_header_fun
-        self._write_data_fun = write_data_fun
+        self._write_header_function = write_header_function
+        self._write_data_function = write_data_function
 
         self._filepath = None  # Will be of type pathlib.Path()
         self._filehandle = None
@@ -90,22 +168,15 @@ class FileLogger(QtCore.QObject):
         if self._is_recording:
             self._filehandle.close()
 
-    def set_write_header_fun(self, write_header_fun: Callable):
+    def set_write_header_function(self, write_header_function: Callable):
         """
-        Instruct user that he should use:
-            * self.write()
         """
-        self._write_header_fun = write_header_fun
+        self._write_header_function = write_header_function
 
-    def set_write_data_fun(self, write_data_fun: Callable):
+    def set_write_data_function(self, write_data_function: Callable):
         """
-        Instruct user that he should use:
-            * self.write()`
-
-        Optionally:
-            * self.elapsed() # For PC timestamp, taken from time.perf_counter()
         """
-        self._write_data_fun = write_data_fun
+        self._write_data_function = write_data_function
 
     @QtCore.pyqtSlot(bool)
     def record(self, state):
@@ -131,12 +202,15 @@ class FileLogger(QtCore.QObject):
 
     def update(self, filepath: str == "", mode: str = "a"):
         """
-            mode (str):
-                Mode in which the file is openend, see 'open()' for more
-                details. Defaults to 'a'. Most common options:
-                'w': Open for writing, truncating the file first
-                'a': Open for writing, appending to the end of the file if it
-                     exists
+        Args:
+            mode (````str``):
+                Mode in which the file is openend, see ``open()`` for more
+                details. Most common options:
+                * ``w``: Open for writing, truncating the file first.
+                * ``a``: Open for writing, appending to the end of the file if
+                  it exists.
+
+                Defaults: ``a``
         """
         if self._start:
             if filepath == "":
@@ -155,8 +229,8 @@ class FileLogger(QtCore.QObject):
             if self._create_log():
                 self.signal_recording_started.emit(filepath)
                 self._is_recording = True
-                if self._write_header_fun is not None:
-                    self._write_header_fun()
+                if self._write_header_function is not None:
+                    self._write_header_function()
                 self._timer.start()
 
             else:
@@ -168,25 +242,23 @@ class FileLogger(QtCore.QObject):
             self.close()
 
         if self._is_recording:
-            if self._write_data_fun is not None:
-                self._write_data_fun()
+            if self._write_data_function is not None:
+                self._write_data_function()
 
     def elapsed(self) -> float:
-        """
-        Returns time in seconds since start of recording.
+        """Returns time in seconds (``float``) since start of recording.
         """
         return self._timer.elapsed() / 1e3
 
     def pretty_elapsed(self) -> str:
-        """
-        Returns time as "h:mm:ss" since start of recording.
+        """Returns time as "h:mm:ss" (``str``) since start of recording.
         """
         return str(datetime.timedelta(seconds=int(self.elapsed())))
 
     def _create_log(self) -> bool:
-        """Open new log file and keep file handle open.
-        Returns:
-            True if successful, False otherwise.
+        """Create/open the log file and keep the file handle open.
+
+        Returns True if successful, False otherwise.
         """
         try:
             self._filehandle = open(self._filepath, self._mode)
@@ -197,9 +269,9 @@ class FileLogger(QtCore.QObject):
             return True
 
     def write(self, data: AnyStr) -> bool:
-        """
-        Returns:
-            True if successful, False otherwise.
+        """Write binary or ASCII data to the currently opened log file.
+
+        Returns True if successful, False otherwise.
         """
         try:
             self._filehandle.write(data)
