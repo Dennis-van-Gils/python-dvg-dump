@@ -57,12 +57,12 @@ class FileLogger(QtCore.QObject):
 
     NOTE:
         This class lacks a mutex and is hence not threadsafe from the get-go.
-        As long as ``update()`` is being called from inside another mutex such
-        as a data-acquisition mutex, for instance, it is safe.
+        As long as ``update()`` is being called from inside another mutex, such
+        as a data-acquisition mutex for instance, it is safe.
 
     NOTE:
-        By design, this class will continue on when exceptions occur. They are
-        reported to the command line.
+        By design the code in this class will continue on when exceptions occur.
+        They are reported to the command line.
 
     .. rubric:: Signals:
 
