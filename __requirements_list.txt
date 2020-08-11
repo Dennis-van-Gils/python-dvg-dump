@@ -19,25 +19,5 @@
                                     scipy
                                     numba
                                     pyfftw
-│
-├────
-│
-    dvg_pyqt_bufferedplot
-                                    PyQt5
-                                    pyqtgraph
-                                    numpy
-
-    dvg_pyqt_charthistory
-                                    PyQt5
-                                    pyqtgraph
-                                    numpy
-                                                dvg_ringbuffer
-
-    dvg_pyqt_controls
-                                    PyQt5
-
-    dvg_pyqt_filelogger
-                                    PyQt5
-                                                dvg_debug_functions
-│
+││
 └────
