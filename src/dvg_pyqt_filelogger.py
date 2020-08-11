@@ -13,7 +13,7 @@ Installation::
 __author__ = "Dennis van Gils"
 __authoremail__ = "vangils.dennis@gmail.com"
 __url__ = "https://github.com/Dennis-van-Gils/dvg-pyqt_..."
-__date__ = "10-08-2020"
+__date__ = "11-08-2020"
 __version__ = "1.0.0"
 
 from typing import AnyStr, Callable
@@ -27,33 +27,37 @@ from dvg_debug_functions import print_fancy_traceback as pft
 
 
 class FileLogger(QtCore.QObject):
-    """Handles logging data to a file on disk, particularly well suited for
-    multithreaded programs where one thread is writing data to the log and the
-    other thread (the main/GUI thread) requests starting and stopping of the
-    log, e.g., by the user pressing a button.
+    """Handles logging data to a file particularly well suited for multithreaded
+    programs where one thread is writing data to the log and the other thread
+    (the main/GUI thread) requests starting and stopping of the log, e.g.,
+    by the user pressing a button.
 
     The methods ``start_recording()``, ``stop_recording()`` and ``record(bool)``
     can be directly called from the main/GUI thread.
 
-    In the logging thread you repeatedly need to call ``update()``.
+    In the logging thread you repeatedly need to call ``update()``. This method
+    takes cares of the state machine behind ``FileLogger`` and will perform the
+    appropiate action, such as creating a file on disk, creating the header or
+    writing new data to the log.
 
     Args:
         write_header_function (``Callable``, optional):
-            Reference to a function that contains the code to write a header to
-            the log file. This will get called during ``update()``.
+            Reference to a function that contains your specific code to write a
+            header to the log file. This will get called during ``update()``.
 
             Default: ``None``
 
         write_data_function (``Callable``, optional):
-            Reference to a function that contains the code to write new data to
-            the log file. This will get called during ``update()``.
+            Reference to a function that contains your specific code to write
+            new data to the log file. This will get called during ``update()``.
 
             Default: ``None``
 
-    Both of the above functions can contain calls to the following class
-    members:
-        * ``FileLogger.write()``
-        * ``FileLogger.elapsed()``
+        Both of the above functions can contain calls to the following class
+        members:
+
+            * ``FileLogger.write()``
+            * ``FileLogger.elapsed()``
 
     NOTE:
         This class lacks a mutex and is hence not threadsafe from the get-go.
@@ -66,29 +70,27 @@ class FileLogger(QtCore.QObject):
 
     .. rubric:: Signals:
 
-    Signals:
-        signal_recording_started (``str``):
-            Emitted whenever a new recording has started. Useful for, e.g.,
-            updating text of a record button.
+    ``signal_recording_started (str)``:
+        Emitted whenever a new recording has started. Useful for, e.g.,
+        updating text of a record button.
 
-            Returns:
-                The filepath as ``str`` of the newly created log file.
+        Returns:
+            The filepath as ``str`` of the newly created log file.
 
-            Type:
-                ``PyQt5.QtCore.pyqtSignal()``
+        Type:
+            ``PyQt5.QtCore.pyqtSignal()``
 
-        signal_recording_stopped (``pathlib.Path``):
-            Emitted whenever the recording has stopped. Useful for, e.g.,
-            updating text of a record button.
+    ``signal_recording_stopped (pathlib.Path)``:
+        Emitted whenever the recording has stopped. Useful for, e.g., updating
+        text of a record button.
 
-            Returns:
-                The filepath as ``pathlib.Path()`` of the newly created log
-                file. You could use this to, e.g., automatically navigate to
-                the log in the file explorer or ask the user for a 'save to'
-                destination.
+        Returns:
+            The filepath as ``pathlib.Path()`` of the newly created log file.
+            You could use this to, e.g., automatically navigate to the log in
+            the file explorer or ask the user for a 'save to' destination.
 
-            Type:
-                ``PyQt5.QtCore.pyqtSignal()``
+        Type:
+            ``PyQt5.QtCore.pyqtSignal()``
 
     Example usage:
 
@@ -169,18 +171,14 @@ class FileLogger(QtCore.QObject):
             self._filehandle.close()
 
     def set_write_header_function(self, write_header_function: Callable):
-        """
-        """
         self._write_header_function = write_header_function
 
     def set_write_data_function(self, write_data_function: Callable):
-        """
-        """
         self._write_data_function = write_data_function
 
     @QtCore.pyqtSlot(bool)
-    def record(self, state):
-        """Convenience function
+    def record(self, state: bool = True):
+        """Can be called from any thread.
         """
         if state:
             self.start_recording()
@@ -189,26 +187,42 @@ class FileLogger(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def start_recording(self):
+        """Can be called from any thread.
+        """
         self._start = True
         self._stop = False
 
     @QtCore.pyqtSlot()
     def stop_recording(self):
+        """Can be called from any thread.
+        """
         self._start = False
         self._stop = True
 
     def is_recording(self) -> bool:
         return self._is_recording
 
-    def update(self, filepath: str == "", mode: str = "a"):
-        """
+    def update(self, filepath: str = "", mode: str = "a"):
+        """This method will have to get called repeatedly, presumably in the
+        thread where logging is required, e.g., the data-generation thread.
+        This method takes cares of the state machine behind ``FileLogger`` and
+        will perform the appropiate action, such as creating a file on disk,
+        creating the header or writing new data to the log.
+
         Args:
-            mode (````str``):
-                Mode in which the file is openend, see ``open()`` for more
-                details. Most common options:
-                * ``w``: Open for writing, truncating the file first.
-                * ``a``: Open for writing, appending to the end of the file if
-                  it exists.
+            filepath (``str``):
+                Location of the log file in case it has to be created or opened
+                for write access.
+
+                Default: ``""``
+
+            mode (``str``, optional):
+                Mode in which the log file is to be opened, see ``open()`` for
+                more details. Most common options:
+
+                    * ``w``: Open for writing, truncating the file first.
+                    * ``a``: Open for writing, appending to the end of the file
+                      if it exists.
 
                 Defaults: ``a``
         """
@@ -269,7 +283,10 @@ class FileLogger(QtCore.QObject):
             return True
 
     def write(self, data: AnyStr) -> bool:
-        """Write binary or ASCII data to the currently opened log file.
+        """Write binary or ASCII data to the currently opened log file. By
+        design any exceptions occuring in this method will not terminate the
+        execution, but it will report the error to the command line on continue
+        on instead.
 
         Returns True if successful, False otherwise.
         """
@@ -289,8 +306,6 @@ class FileLogger(QtCore.QObject):
         self._filehandle.flush()
 
     def close(self):
-        """
-        """
         if self._is_recording:
             self._filehandle.close()
         self._start = False
